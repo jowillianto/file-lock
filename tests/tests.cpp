@@ -341,20 +341,33 @@ auto fuzzer_tester(
   });
 }
 
+template <file_lock::SharedMutex T>
+  requires(std::constructible_from<T, std::filesystem::path>)
+auto undefined_behaviour_tester(
+  const std::string &test_suite, const std::filesystem::path &tmp_fd
+) {
+  return test_lib::Tester<>{test_suite, true, false}
+    .add_test("unlock_without_lock", [&](){
+      auto fpath = tmp_fd / test_lib::random_string(10);
+      T lock {fpath};
+      lock.unlock();
+    })
+    .add_test("unlock_shared_without_lock", [&](){
+      auto fpath = tmp_fd / test_lib::random_string(10);
+      T lock {fpath};
+      lock.unlock_shared();
+    });
+}
+
 int main() {
   const std::filesystem::path tmp_fd{"tmp"};
   DirGuard dir_guard{tmp_fd};
-  auto basic_mutex_tester =
-    mutex_tester<file_lock::BasicMutex>("basic::BasicMutex", tmp_fd);
-  auto large_mutex_tester =
-    mutex_tester<file_lock::LargeFileMutex>("basic::LargeFileMutex", tmp_fd);
-  auto basic_fuzzer_tester =
-    fuzzer_tester<file_lock::BasicMutex>("fuzzer::BasicMutex", tmp_fd);
-  auto large_fuzzer_tester =
-    fuzzer_tester<file_lock::LargeFileMutex>("fuzzer::LargeFileMutex", tmp_fd);
-
-  test_lib::print_result(basic_mutex_tester, basic_mutex_tester.run_all());
-  test_lib::print_result(large_mutex_tester, large_mutex_tester.run_all());
-  test_lib::print_result(basic_fuzzer_tester, basic_fuzzer_tester.run_all());
-  test_lib::print_result(large_fuzzer_tester, large_fuzzer_tester.run_all());
+  test_lib::run_all_and_print(
+    mutex_tester<file_lock::BasicMutex>("basic::BasicMutex", tmp_fd),
+    mutex_tester<file_lock::LargeFileMutex>("basic::LargeFileMutex", tmp_fd),
+    fuzzer_tester<file_lock::BasicMutex>("fuzzer::BasicMutex", tmp_fd),
+    fuzzer_tester<file_lock::LargeFileMutex>("fuzzer::LargeFileMutex", tmp_fd),
+    undefined_behaviour_tester<file_lock::BasicMutex>("undefined::BasicMutex", tmp_fd),
+    undefined_behaviour_tester<file_lock::LargeFileMutex>("undefined::LargeFileMutex", tmp_fd)
+  );
 }
