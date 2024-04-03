@@ -4,12 +4,13 @@ module;
 export module file_lock:large_file_mutex;
 import :shared_mutex;
 import :basic_mutex;
+import :sys_file_lock;
 
 namespace file_lock {
   export class LargeFileMutex {
     std::filesystem::path _file_path;
     std::filesystem::path _lock_file_path;
-    BasicMutex _file_lock;
+    FileMutex _file_lock;
 
     public:
       LargeFileMutex(const std::filesystem::path& file_path) : 
@@ -32,6 +33,7 @@ namespace file_lock {
       void lock_shared() {_file_lock.lock_shared(); }
       bool try_lock_shared() {return _file_lock.try_lock_shared(); }
       void unlock_shared() { _file_lock.unlock_shared(); }
+      SysFileLock& file_lock() { return _file_lock.file_lock(); }
       const std::filesystem::path& protected_path() const {
         return _file_path;
       }

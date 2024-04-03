@@ -368,11 +368,11 @@ int main() {
   const std::filesystem::path tmp_fd{"tmp"};
   DirGuard dir_guard{tmp_fd};
   test_lib::run_all_and_print(
-    mutex_tester<file_lock::BasicMutex>("basic::BasicMutex", tmp_fd),
+    mutex_tester<file_lock::FileMutex>("basic::FileMutex", tmp_fd),
     mutex_tester<file_lock::LargeFileMutex>("basic::LargeFileMutex", tmp_fd),
-    fuzzer_tester<file_lock::BasicMutex>("fuzzer::BasicMutex", tmp_fd),
+    fuzzer_tester<file_lock::FileMutex>("fuzzer::FileMutex", tmp_fd),
     fuzzer_tester<file_lock::LargeFileMutex>("fuzzer::LargeFileMutex", tmp_fd),
-    undefined_behaviour_tester<file_lock::BasicMutex>("undefined::BasicMutex", tmp_fd),
+    undefined_behaviour_tester<file_lock::FileMutex>("undefined::FileMutex", tmp_fd),
     undefined_behaviour_tester<file_lock::LargeFileMutex>("undefined::LargeFileMutex", tmp_fd)
   );
 }

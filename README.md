@@ -11,7 +11,7 @@ To construct a file
 import file_lock;
 
 auto file_path = std::filesystem::path {R"(some path to your file)"};
-auto lock = file_lock::BasicMutex { file_path };
+auto lock = file_lock::FileMutex { file_path };
 lock.lock(); // Locks the file for writing (blocking)
 lock.unlock(); // Unlocks the file
 /*
