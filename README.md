@@ -29,3 +29,9 @@ lock.try_lock_shared();
 std::unique_lock unique_lock { lock };
 std::shared_lock shared_lock { lock };
 ```
+
+## Linking via CMake
+```cmake
+
+target_link_libraries(<target> multiprocessing_fileLock)
+```
