@@ -356,6 +356,11 @@ auto undefined_behaviour_tester(
       auto fpath = tmp_fd / test_lib::random_string(10);
       T lock {fpath};
       lock.unlock_shared();
+    })
+    .add_test("duplicate", [&](){
+      auto fpath = tmp_fd / test_lib::random_string(10);
+      T lock {fpath};
+      T lock_dup {fpath};
     });
 }
 
