@@ -23,15 +23,24 @@ namespace file_lock {
         std::error_code{ errno, std::generic_category() }
       };
     }
-  public:
-    BasicMutex(
-      std::filesystem::path file_path, int additional_flags = 0
-    ) : _file_path(std::move(file_path))
-    {
+    void _open_file_and_absol_path(int additional_flags) {
       _fd = open(
         _file_path.c_str(), O_CREAT | O_APPEND | O_RDONLY | additional_flags
       );
       if (_fd == -1) _throw_sys_error();
+      _file_path = std::filesystem::absolute(_file_path);
+    }
+  public:
+    BasicMutex(
+      const std::filesystem::path& file_path, int additional_flags = 0
+    ) : _file_path(file_path)
+    {
+      _open_file_and_absol_path(additional_flags);
+    }
+    BasicMutex(const std::string& file_path, int additional_flags = 0) : 
+      _file_path(file_path) 
+    {
+      _open_file_and_absol_path(additional_flags);
     }
     void lock() {
       std::unique_lock lock { _mutex };
@@ -74,6 +83,12 @@ namespace file_lock {
         return false;
       }
       return true;
+    }
+    const std::filesystem::path& protected_path() const {
+      return _file_path;
+    }
+    std::string protected_path_string() const{
+      return _file_path.string();
     }
     ~BasicMutex() {
       if (_fd != -1) {

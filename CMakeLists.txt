@@ -5,7 +5,7 @@ set (CMAKE_CXX_STANDARD_REQUIRED true)
 set (CMAKE_CXX_SCAN_FOR_MODULES true)
 
 find_package(Python3 3.7 REQUIRED COMPONENTS Interpreter Development)
-find_package(Boost REQUIRED COMPONENTS Python)
+find_package(Boost REQUIRED COMPONENTS python3)
 
 add_library(multiprocessing_fileLock)
 file (
@@ -22,14 +22,17 @@ add_library(
 )
 target_include_directories(multiprocessing_fileLock_python 
   PUBLIC 
-    ${Boost_INCLUDE_DIR}
+    ${Boost_INCLUDE_DIRS}
     ${Python3_INCLUDE_DIRS}
 )
-# target_link_libraries(multiprocessing_fileLock_python 
-#     ${Boost_LIBRARIES}
-#     Python3
-#     multiprocessing_fileLock 
-# )
+target_link_libraries(multiprocessing_fileLock_python 
+    ${Boost_LIBRARIES}
+    ${Python3_LIBRARIES}
+    multiprocessing_fileLock 
+)
+set_target_properties(multiprocessing_fileLock_python PROPERTIES PREFIX "")
+set_target_properties(multiprocessing_fileLock_python PROPERTIES OUTPUT_NAME file_lock)
+set_target_properties(multiprocessing_fileLock_python PROPERTIES SUFFIX ".so")
 
 add_subdirectory(lib/test-lib EXCLUDE_FROM_ALL)
 add_executable(
