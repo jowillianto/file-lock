@@ -1,15 +1,18 @@
 module;
 #include <concepts>
+#include <filesystem>
 export module file_lock:shared_mutex;
 
 namespace file_lock {
   export template<typename Mutex>
-  concept SharedMutex = requires(Mutex m){
+  concept FileMutex = requires(Mutex m){
     { m.lock() };
     { m.unlock() };
     { m.try_lock() } -> std::same_as<bool>;
     { m.lock_shared() };
     { m.try_lock_shared() } -> std::same_as<bool>;
     { m.unlock_shared() }; 
+    { m.protected_path() } -> std::same_as<const std::filesystem::path& >;
+    { m.protected_path_string() } -> std::same_as<std::string>;
   };
 };

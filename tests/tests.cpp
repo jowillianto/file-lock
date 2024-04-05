@@ -40,7 +40,7 @@ public:
   }
 };
 
-template <file_lock::SharedMutex T>
+template <file_lock::FileMutex T>
   requires(std::constructible_from<T, std::filesystem::path>)
 auto mutex_tester(
   const std::string &test_suite, const std::filesystem::path &tmp_fd
@@ -235,7 +235,7 @@ auto mutex_tester(
     });
 }
 
-template <file_lock::SharedMutex T>
+template <file_lock::FileMutex T>
   requires(std::constructible_from<T, std::filesystem::path>)
 auto fuzzer_tester(
   const std::string &test_suite, const std::filesystem::path &tmp_fd
@@ -341,7 +341,7 @@ auto fuzzer_tester(
   });
 }
 
-template <file_lock::SharedMutex T>
+template <file_lock::FileMutex T>
   requires(std::constructible_from<T, std::filesystem::path>)
 auto undefined_behaviour_tester(
   const std::string &test_suite, const std::filesystem::path &tmp_fd

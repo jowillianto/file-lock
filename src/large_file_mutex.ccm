@@ -40,5 +40,5 @@ namespace file_lock {
       }
   };
 
-  static_assert (SharedMutex<LargeFileMutex>);
+  static_assert (FileMutex<LargeFileMutex>);
 };

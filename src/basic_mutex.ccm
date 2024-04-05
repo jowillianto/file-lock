@@ -100,5 +100,5 @@ namespace file_lock {
     }
   };
 
-  static_assert(SharedMutex<BasicMutex>);
+  static_assert(FileMutex<BasicMutex>);
 };
