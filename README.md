@@ -2,6 +2,15 @@
 A multithreaded multiprocessed file locking mechanism compatible with `std::unique_lock` and `std::shared_lock`. A caveat to this FileLock system is that : 
 - Multithreaded file sharing have to be done on the same FileLock object.
 
+## Requirements
+Since this process uses C++ modules, the following are the requirements : 
+```
+boost > 1.84 (with python)
+cmake >= 3.28
+clang >= 17 or equivalent gcc (with modules support p1689)
+ninja >= 1.11.1
+```
+
 ## Constructing a File Lock
 To construct a file 
 ```cpp
@@ -36,5 +45,33 @@ std::shared_lock shared_lock { lock };
 target_link_libraries(<target> multiprocessing_fileLock)
 ```
 
-# Future Works
-- Python Wrapper
+## Compiling for a Python Build
+```sh
+CXX=$(<path to your clang>) cmake -B build -GNinja
+cd build
+ninja multiprocessing_fileLock_python
+```
+The above commands will produce a `file-lock.so` file which you can import into a python application. 
+
+# Python API Documentation
+Assume that `file-lock.so` contains the following python definition with strict type definitions. 
+```py
+class FileMutex:
+    def __init__(self, file_path : str):
+        ...
+      
+    def lock() -> None:
+        ...
+    def unlock() -> None:
+        ...
+    def try_lock() -> bool:
+        ...
+    def lock_shared() -> None:
+        ...
+    def unlock_shared() -> None:
+        ...
+    def try_unlock_shared() -> bool:
+        ...
+    def protected_path_string() -> str:
+        ...
+```
