@@ -7,59 +7,26 @@ import :sys_file_lock;
 
 namespace file_lock {
   export class FileMutex {
+  private:
     std::shared_mutex _mutex;
     SysFileLock _file_lock;
-  public:
-    FileMutex(
-      const std::filesystem::path &file_path
-    ) :
-      _file_lock{file_path}
-    {}
-    FileMutex(const std::string &file_path) :
-      _file_lock{file_path}
-    {}
-    void lock() {
-      _mutex.lock();
-      _file_lock.lock();
-    }
-    void unlock() {
-      _file_lock.unlock();
-      _mutex.unlock();
-    }
-    bool try_lock() {
-      if (!_mutex.try_lock()) return false;
-      if (!_file_lock.try_lock()) {
-        _mutex.unlock();
-        return false;
-      }
-      return true;
-    }
-    void lock_shared() {
-      _mutex.lock_shared();
-      _file_lock.lock_shared();
-    }
-    void unlock_shared() {
-      _file_lock.unlock_shared();
-      _mutex.unlock_shared();
-    }
-    bool try_lock_shared() {
-      if (!_mutex.try_lock_shared()) return false;
-      if (!_file_lock.try_lock_shared()) {
-        _mutex.unlock_shared();
-        return false;
-      }
-      return true;
-    }
-    const std::filesystem::path &protected_path() const {
-      return _file_lock.protected_path();
-    }
-    std::string protected_path_string() const {
-      return _file_lock.protected_path_string();
-    }
-    SysFileLock& file_lock(){
-      return _file_lock;
-    }
 
+  public:
+    FileMutex(const std::filesystem::path &file_path);
+    FileMutex(const std::string &file_path);
+
+    void lock();
+    void unlock();
+    bool try_lock();
+
+    void lock_shared();
+    void unlock_shared();
+    bool try_lock_shared();
+
+    const std::filesystem::path &protected_path() const;
+    std::string protected_path_string() const;
+
+    SysFileLock &file_lock();
   };
 
   static_assert(SharedMutex<FileMutex>);

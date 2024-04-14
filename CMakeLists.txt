@@ -12,9 +12,16 @@ file (
   GLOB file_lock_ccm
   "${CMAKE_CURRENT_LIST_DIR}/src/*.ccm"
 )
+file (
+  GLOB file_lock_cpp
+  "${CMAKE_CURRENT_LIST_DIR}/src/*.cpp"
+)
+
 target_sources(multiprocessing_fileLock
   PUBLIC
     FILE_SET CXX_MODULES FILES ${file_lock_ccm}
+  PUBLIC
+    ${file_lock_cpp}
 )
 add_library(
   multiprocessing_fileLock_python SHARED EXCLUDE_FROM_ALL
