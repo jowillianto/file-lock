@@ -1,0 +1,38 @@
+module;
+#include <sys/fcntl.h>
+#include <sys/resource.h>
+#include <sys/stat.h>
+#include <sys/file.h>
+#include <filesystem>
+#include <shared_mutex>
+#include <unistd.h>
+export module file_lock:basic_mutex;
+import :shared_mutex;
+import :sys_file_lock;
+
+namespace file_lock {
+  export class FileMutex {
+  private:
+    std::shared_mutex _mutex;
+    SysFileLock _file_lock;
+
+  public:
+    FileMutex(const std::filesystem::path &file_path);
+    FileMutex(const std::string &file_path);
+
+    void lock();
+    void unlock();
+    bool try_lock();
+
+    void lock_shared();
+    void unlock_shared();
+    bool try_lock_shared();
+
+    const std::filesystem::path &protected_path() const;
+    std::string protected_path_string() const;
+
+    SysFileLock &file_lock();
+  };
+
+  static_assert(SharedMutex<FileMutex>);
+};

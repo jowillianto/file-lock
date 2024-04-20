@@ -40,7 +40,7 @@ public:
   }
 };
 
-template <file_lock::FileMutex T>
+template <file_lock::SharedMutex T>
   requires(std::constructible_from<T, std::filesystem::path>)
 auto mutex_tester(
   const std::string &test_suite, const std::filesystem::path &tmp_fd
@@ -235,7 +235,7 @@ auto mutex_tester(
     });
 }
 
-template <file_lock::FileMutex T>
+template <file_lock::SharedMutex T>
   requires(std::constructible_from<T, std::filesystem::path>)
 auto fuzzer_tester(
   const std::string &test_suite, const std::filesystem::path &tmp_fd
@@ -341,7 +341,7 @@ auto fuzzer_tester(
   });
 }
 
-template <file_lock::FileMutex T>
+template <file_lock::SharedMutex T>
   requires(std::constructible_from<T, std::filesystem::path>)
 auto undefined_behaviour_tester(
   const std::string &test_suite, const std::filesystem::path &tmp_fd
@@ -368,11 +368,11 @@ int main() {
   const std::filesystem::path tmp_fd{"tmp"};
   DirGuard dir_guard{tmp_fd};
   test_lib::run_all_and_print(
-    mutex_tester<file_lock::BasicMutex>("basic::BasicMutex", tmp_fd),
+    mutex_tester<file_lock::FileMutex>("basic::BasicMutex", tmp_fd),
     mutex_tester<file_lock::LargeFileMutex>("basic::LargeFileMutex", tmp_fd),
-    fuzzer_tester<file_lock::BasicMutex>("fuzzer::BasicMutex", tmp_fd),
+    fuzzer_tester<file_lock::FileMutex>("fuzzer::BasicMutex", tmp_fd),
     fuzzer_tester<file_lock::LargeFileMutex>("fuzzer::LargeFileMutex", tmp_fd),
-    undefined_behaviour_tester<file_lock::BasicMutex>("undefined::BasicMutex", tmp_fd),
+    undefined_behaviour_tester<file_lock::FileMutex>("undefined::BasicMutex", tmp_fd),
     undefined_behaviour_tester<file_lock::LargeFileMutex>("undefined::LargeFileMutex", tmp_fd)
   );
 }
