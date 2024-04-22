@@ -14,16 +14,30 @@ namespace file_lock {
     FileMutex _file_lock;
 
   public:
-    LargeFileMutex(const std::filesystem::path &file_path);
-    LargeFileMutex(const std::string &file_path);
+    LargeFileMutex(const std::filesystem::path &file_path) :
+      _file_path(file_path),
+      _lock_file_path(file_path.parent_path() / (file_path.stem().string() + ".sys_lock")),
+      _file_lock(_lock_file_path) {}
 
-    void lock() const;
-    void unlock() const;
-    bool try_lock() const;
+    void lock() const {
+      _file_lock.lock();
+    }
+    void unlock() const {
+      _file_lock.unlock();
+    }
+    bool try_lock() const {
+      return _file_lock.try_lock();
+    }
 
-    void lock_shared() const;
-    void unlock_shared() const;
-    bool try_lock_shared() const;
+    void lock_shared() const {
+      _file_lock.lock_shared();
+    }
+    void unlock_shared() const {
+      _file_lock.unlock_shared();
+    }
+    bool try_lock_shared() const {
+      return _file_lock.try_lock_shared();
+    }
   };
 
   static_assert(SharedMutex<LargeFileMutex>);

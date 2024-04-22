@@ -1,8 +1,8 @@
 module;
 #include <sys/fcntl.h>
+#include <sys/file.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
-#include <sys/file.h>
 #include <filesystem>
 #include <shared_mutex>
 #include <unistd.h>
@@ -17,16 +17,41 @@ namespace file_lock {
     SysFileLock _file_lock;
 
   public:
-    FileMutex(const std::filesystem::path &file_path);
-    FileMutex(const std::string &file_path);
+    FileMutex(const std::filesystem::path &file_path) : _file_lock{file_path} {}
 
-    void lock() const;
-    void unlock() const;
-    bool try_lock() const;
+    void lock() const {
+      _mutex.lock();
+      _file_lock.lock();
+    }
+    void unlock() const {
+      _file_lock.unlock();
+      _mutex.unlock();
+    }
+    bool try_lock() const {
+      if (!_mutex.try_lock()) return false;
+      if (!_file_lock.try_lock()) {
+        _mutex.unlock();
+        return false;
+      }
+      return true;
+    }
 
-    void lock_shared() const;
-    void unlock_shared() const;
-    bool try_lock_shared() const;
+    void lock_shared() const {
+
+      _file_lock.lock_shared();
+    }
+    void unlock_shared() const {
+
+      _mutex.unlock_shared();
+    }
+    bool try_lock_shared() const {
+      if (!_mutex.try_lock_shared()) return false;
+      if (!_file_lock.try_lock_shared()) {
+        _mutex.unlock_shared();
+        return false;
+      }
+      return true;
+    }
   };
 
   static_assert(SharedMutex<FileMutex>);
