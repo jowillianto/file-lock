@@ -1,5 +1,4 @@
 #include <sys/wait.h>
-#include <array>
 #include <chrono>
 #include <exception>
 #include <filesystem>

@@ -3,9 +3,7 @@ module;
 #include <sys/file.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
-#include <cstring>
 #include <filesystem>
-#include <string>
 #include <system_error>
 #include <unistd.h>
 export module file_lock:sys_file_lock;
