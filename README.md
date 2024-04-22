@@ -54,7 +54,7 @@ ninja multiprocessing_fileLock_python
 The above commands will produce a `file-lock.so` file which you can import into a python application. 
 
 # Python API Documentation
-Assume that `file-lock.so` contains the following python definition with strict type definitions. 
+Assume that `file_lock.so` contains the following python definition with strict type definitions. 
 ```py
 class FileMutex:
     def __init__(self, file_path : str):
@@ -72,6 +72,6 @@ class FileMutex:
         ...
     def try_unlock_shared() -> bool:
         ...
-    def protected_path_string() -> str:
+    def file_path() -> str:
         ...
 ```
