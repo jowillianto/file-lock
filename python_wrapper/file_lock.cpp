@@ -1,4 +1,5 @@
 #include <boost/python.hpp>
+#include <filesystem>
 #include <string>
 #include <Python.h>
 import file_lock;
@@ -6,10 +7,13 @@ using namespace boost::python;
 
 class PythonMutex{
   file_lock::LargeFileMutex _internal_mutex;
+  std::string _file_path;
   public:
     PythonMutex(const std::string& file_path) : 
       _internal_mutex { file_path }
-    {}
+    {
+      _file_path = std::filesystem::absolute(std::filesystem::path{ file_path }).string();
+    }
     void lock () { 
       Py_BEGIN_ALLOW_THREADS
       _internal_mutex.lock();
@@ -24,8 +28,8 @@ class PythonMutex{
     }
     bool try_lock_shared() {return _internal_mutex.try_lock_shared(); }
     void unlock_shared() { _internal_mutex.unlock_shared(); }
-    std::string protected_path_string() const {
-      return _internal_mutex.protected_path_string();
+    const std::string& file_path() const {
+      return _file_path;
     }
 };
 
@@ -37,6 +41,6 @@ BOOST_PYTHON_MODULE(file_lock){
     .def("lock_shared", &PythonMutex::lock_shared)
     .def("unlock_shared", &PythonMutex::unlock_shared)
     .def("try_lock_shared", &PythonMutex::try_lock_shared)
-    .def("protected_path_string", &PythonMutex::protected_path_string)
+    .def("file_path", &PythonMutex::file_path, return_value_policy<return_by_value>())
   ;
 }

@@ -10,23 +10,20 @@ namespace file_lock {
     std::filesystem::path _file_path;
     int _fd;
 
-    void _throw_sys_error();
+    void _throw_sys_error() const;
     void _open_file_and_absol_path(int additional_flags);
 
   public:
     SysFileLock(const std::filesystem::path &file_path);
     SysFileLock(const std::string &file_path);
 
-    void lock();
-    void unlock();
-    bool try_lock();
+    void lock() const;
+    void unlock() const;
+    bool try_lock() const;
 
-    void lock_shared();
-    void unlock_shared();
-    bool try_lock_shared();
-
-    const std::filesystem::path &protected_path() const;
-    std::string protected_path_string() const;
+    void lock_shared() const;
+    void unlock_shared() const;
+    bool try_lock_shared() const;
 
     ~SysFileLock();
   };

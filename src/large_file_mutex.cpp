@@ -13,39 +13,27 @@ namespace file_lock {
     _lock_file_path(_file_path.parent_path() / (_file_path.stem().string() + ".sys_lock")),
     _file_lock(_lock_file_path) {}
 
-  void LargeFileMutex::lock() {
+  void LargeFileMutex::lock() const {
     _file_lock.lock();
   }
 
-  void LargeFileMutex::unlock() {
+  void LargeFileMutex::unlock() const {
     _file_lock.unlock();
   }
 
-  bool LargeFileMutex::try_lock() {
+  bool LargeFileMutex::try_lock() const {
     return _file_lock.try_lock();
   }
 
-  void LargeFileMutex::lock_shared() {
+  void LargeFileMutex::lock_shared() const {
     _file_lock.lock_shared();
   }
 
-  void LargeFileMutex::unlock_shared() {
+  void LargeFileMutex::unlock_shared() const {
     _file_lock.unlock_shared();
   }
 
-  bool LargeFileMutex::try_lock_shared() {
+  bool LargeFileMutex::try_lock_shared() const {
     return _file_lock.try_lock_shared();
-  }
-
-  SysFileLock &LargeFileMutex::file_lock() {
-    return _file_lock.file_lock();
-  }
-
-  const std::filesystem::path &LargeFileMutex::protected_path() const {
-    return _file_path;
-  }
-
-  std::string LargeFileMutex::protected_path_string() const {
-    return _file_path.string();
   }
 }

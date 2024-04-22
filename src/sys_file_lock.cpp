@@ -1,14 +1,14 @@
 module;
 #include <sys/fcntl.h>
+#include <sys/file.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <filesystem>
-#include <sys/file.h>
+#include <unistd.h>
 module file_lock;
 
 namespace file_lock {
-  void SysFileLock::_throw_sys_error() {
+  void SysFileLock::_throw_sys_error() const {
     throw std::filesystem::filesystem_error{
       std::strerror(errno), _file_path, std::error_code{errno, std::generic_category()}
     };
@@ -33,44 +33,35 @@ namespace file_lock {
     _open_file_and_absol_path(0);
   }
 
-  void SysFileLock::lock() {
+  void SysFileLock::lock() const {
     int lock_st = flock(_fd, LOCK_EX);
     if (lock_st == -1) _throw_sys_error();
   }
 
-  void SysFileLock::unlock() {
+  void SysFileLock::unlock() const {
     int lock_st = flock(_fd, LOCK_UN);
     if (lock_st == -1) _throw_sys_error();
   }
 
-  bool SysFileLock::try_lock() {
+  bool SysFileLock::try_lock() const {
     int lock_st = flock(_fd, LOCK_EX | LOCK_NB);
     return lock_st != -1;
   }
 
-  void SysFileLock::lock_shared() {
+  void SysFileLock::lock_shared() const {
     int lock_st = flock(_fd, LOCK_SH);
     if (lock_st == -1) _throw_sys_error();
   }
 
-  void SysFileLock::unlock_shared() {
+  void SysFileLock::unlock_shared() const {
     int lock_st = flock(_fd, LOCK_UN);
     if (lock_st == -1) _throw_sys_error();
   }
 
-  bool SysFileLock::try_lock_shared() {
+  bool SysFileLock::try_lock_shared() const {
     int lock_st = flock(_fd, LOCK_SH | LOCK_NB);
     return lock_st != -1;
   }
-
-  const std::filesystem::path &SysFileLock::protected_path() const {
-    return _file_path;
-  }
-
-  std::string SysFileLock::protected_path_string() const {
-    return _file_path.string();
-  }
-
   SysFileLock::~SysFileLock() {
     if (_fd != -1) {
       int close_st = close(_fd);

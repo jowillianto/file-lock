@@ -1,8 +1,10 @@
 #include <sys/wait.h>
+#include <array>
 #include <chrono>
 #include <exception>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <mutex>
 #include <shared_mutex>
 #include <sstream>
@@ -10,8 +12,6 @@
 #include <thread>
 #include <type_traits>
 #include <unistd.h>
-#include <array>
-#include <iostream>
 import test_lib;
 import file_lock;
 
@@ -42,10 +42,8 @@ public:
 
 template <file_lock::SharedMutex T>
   requires(std::constructible_from<T, std::filesystem::path>)
-auto mutex_tester(
-  const std::string &test_suite, const std::filesystem::path &tmp_fd
-) {
-  return test_lib::Tester<>{test_suite}
+auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tmp_fd) {
+  return test_lib::Tester{test_suite}
     .add_test(
       "create_no_truncate",
       [&]() {
@@ -154,9 +152,7 @@ auto mutex_tester(
         std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
         int child_pid = fork();
         if (child_pid == -1)
-          throw std::system_error{
-            std::error_code{errno, std::generic_category()}
-          };
+          throw std::system_error{std::error_code{errno, std::generic_category()}};
         else if (child_pid == 0) {
           T file_mutex{file_path};
           std::this_thread::sleep_for(std::chrono::seconds{3});
@@ -170,9 +166,7 @@ auto mutex_tester(
         std::unique_lock lock{file_mutex};
         int status = 0;
         if (waitpid(child_pid, &status, 0) == -1) {
-          throw std::system_error{
-            std::error_code{errno, std::generic_category()}
-          };
+          throw std::system_error{std::error_code{errno, std::generic_category()}};
         }
         if ((WIFEXITED(status) && WEXITSTATUS(status) == 1) || !WIFEXITED(status))
           throw std::bad_exception{};
@@ -184,9 +178,7 @@ auto mutex_tester(
         std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
         int child_pid = fork();
         if (child_pid == -1)
-          throw std::system_error{
-            std::error_code{errno, std::generic_category()}
-          };
+          throw std::system_error{std::error_code{errno, std::generic_category()}};
         else if (child_pid == 0) {
           T file_mutex{file_path};
           std::this_thread::sleep_for(std::chrono::seconds{3});
@@ -200,9 +192,7 @@ auto mutex_tester(
         std::shared_lock lock{file_mutex};
         int status = 0;
         if (waitpid(child_pid, &status, 0) == -1) {
-          throw std::system_error{
-            std::error_code{errno, std::generic_category()}
-          };
+          throw std::system_error{std::error_code{errno, std::generic_category()}};
         }
         if ((WIFEXITED(status) && WEXITSTATUS(status) == 1) || !WIFEXITED(status))
           throw std::bad_exception{};
@@ -211,9 +201,7 @@ auto mutex_tester(
     .add_test("no_concurrent_multi_process_write_and_read", [&]() {
       std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
       int child_pid = fork();
-      if (child_pid == -1)
-        throw std::system_error{std::error_code{errno, std::generic_category()}
-        };
+      if (child_pid == -1) throw std::system_error{std::error_code{errno, std::generic_category()}};
       else if (child_pid == 0) {
         T file_mutex{file_path};
         std::this_thread::sleep_for(std::chrono::seconds{3});
@@ -227,8 +215,7 @@ auto mutex_tester(
       std::unique_lock lock{file_mutex};
       int status = 0;
       if (waitpid(child_pid, &status, 0) == -1) {
-        throw std::system_error{std::error_code{errno, std::generic_category()}
-        };
+        throw std::system_error{std::error_code{errno, std::generic_category()}};
       }
       if ((WIFEXITED(status) && WEXITSTATUS(status) == 1) || !WIFEXITED(status))
         throw std::bad_exception{};
@@ -237,10 +224,8 @@ auto mutex_tester(
 
 template <file_lock::SharedMutex T>
   requires(std::constructible_from<T, std::filesystem::path>)
-auto fuzzer_tester(
-  const std::string &test_suite, const std::filesystem::path &tmp_fd
-) {
-  return test_lib::Tester<>{test_suite}.add_test("fuzz_test", [&]() {
+auto fuzzer_tester(const std::string &test_suite, const std::filesystem::path &tmp_fd) {
+  return test_lib::Tester{test_suite}.add_test("fuzz_test", [&]() {
     std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
     std::string random_value = test_lib::random_string(1500);
     std::fstream file{file_path, std::ios_base::out | std::ios_base::trunc};
@@ -257,84 +242,70 @@ auto fuzzer_tester(
     T file_mutex{file_path};
     uint32_t fork_count = 0;
     uint32_t thread_count = 0;
-    for (uint32_t i = 0; i < 1000; i += 1){
+    for (uint32_t i = 0; i < 1000; i += 1) {
       if (test_lib::random_integer(0, 1) == 0) thread_count += 1;
-      else fork_count += 1;
+      else
+        fork_count += 1;
     }
     std::vector<pid_t> pid_list;
     pid_list.reserve(fork_count);
     for (uint32_t i = 0; i < fork_count; i += 1) {
       pid_t child_pid = fork();
-      if (child_pid == -1)
-        throw std::system_error{
-          std::error_code{errno, std::generic_category()}
-        };
+      if (child_pid == -1) throw std::system_error{std::error_code{errno, std::generic_category()}};
       else if (child_pid == 0) {
         uint32_t todo = test_lib::random_integer(0, 1);
         T file_mutex{file_path};
-        std::this_thread::sleep_for(
-          std::chrono::milliseconds{test_lib::random_integer(0, 500)}
-        );
+        std::this_thread::sleep_for(std::chrono::milliseconds{test_lib::random_integer(0, 500)});
         if (todo == 0) {
           std::shared_lock lock{file_mutex};
           std::ifstream f{file_path};
           std::stringstream buffer;
           buffer << f.rdbuf();
           if (buffer.str() != random_value) {
-            std::cout<<random_value<<" is not equal to "<<buffer.str()<<std::endl;
+            std::cout << random_value << " is not equal to " << buffer.str() << std::endl;
             exit(1);
           }
         } else {
           std::unique_lock lock{file_mutex};
-          std::ofstream f{
-            file_path, std::ios_base::trunc | std::ios_base::out
-          };
+          std::ofstream f{file_path, std::ios_base::trunc | std::ios_base::out};
           f << random_value;
           f.flush();
           f.close();
         }
         exit(0);
-      }
-      else {
+      } else {
         pid_list.push_back(child_pid);
       }
     }
     std::vector<std::thread> thread_list;
     thread_list.reserve(thread_count);
     for (uint32_t i = 0; i < thread_count; i += 1) {
-      thread_list.emplace_back(
-        std::thread{[&]() mutable {
-          uint32_t todo = test_lib::random_integer(0, 1);
-          std::this_thread::sleep_for(
-            std::chrono::milliseconds{test_lib::random_integer(0, 10)}
-          );
-          if (todo == 0) {
-            std::shared_lock lock{file_mutex};
-            std::ifstream f{file_path};
-            std::stringstream buffer;
-            buffer << f.rdbuf();
-            test_lib::assert_equal(buffer.str(), random_value);
-            f.close();
-          } else {
-            std::unique_lock lock{file_mutex};
-            std::ofstream f{
-              file_path, std::ios_base::trunc | std::ios_base::out
-            };
-            f << random_value;
-            f.flush();
-            f.close();
-          }
-        }}
-      );
+      thread_list.emplace_back(std::thread{[&]() mutable {
+        uint32_t todo = test_lib::random_integer(0, 1);
+        std::this_thread::sleep_for(std::chrono::milliseconds{test_lib::random_integer(0, 10)});
+        if (todo == 0) {
+          std::shared_lock lock{file_mutex};
+          std::ifstream f{file_path};
+          std::stringstream buffer;
+          buffer << f.rdbuf();
+          test_lib::assert_equal(buffer.str(), random_value);
+          f.close();
+        } else {
+          std::unique_lock lock{file_mutex};
+          std::ofstream f{file_path, std::ios_base::trunc | std::ios_base::out};
+          f << random_value;
+          f.flush();
+          f.close();
+        }
+      }});
     }
     for (auto &thread : thread_list)
       thread.join();
     for (auto pid : pid_list) {
       int status = 0;
       if (waitpid(pid, &status, 0) == -1)
-        throw std::system_error{std::error_code{errno, std::generic_category()}
-        };
-      if ((WIFEXITED(status) && WEXITSTATUS(status) == 1) || !WIFEXITED(status)){
+        throw std::system_error{std::error_code{errno, std::generic_category()}};
+      if ((WIFEXITED(status) && WEXITSTATUS(status) == 1) || !WIFEXITED(status)) {
         throw std::bad_exception{};
       }
     }
@@ -346,33 +317,39 @@ template <file_lock::SharedMutex T>
 auto undefined_behaviour_tester(
   const std::string &test_suite, const std::filesystem::path &tmp_fd
 ) {
-  return test_lib::Tester<>{test_suite, true, false}
-    .add_test("unlock_without_lock", [&](){
+  return test_lib::Tester{test_suite}
+    .add_test(
+      "unlock_without_lock",
+      [&]() {
+        auto fpath = tmp_fd / test_lib::random_string(10);
+        T lock{fpath};
+        lock.unlock();
+      }
+    )
+    .add_test(
+      "unlock_shared_without_lock",
+      [&]() {
+        auto fpath = tmp_fd / test_lib::random_string(10);
+        T lock{fpath};
+        lock.unlock_shared();
+      }
+    )
+    .add_test("duplicate", [&]() {
       auto fpath = tmp_fd / test_lib::random_string(10);
-      T lock {fpath};
-      lock.unlock();
-    })
-    .add_test("unlock_shared_without_lock", [&](){
-      auto fpath = tmp_fd / test_lib::random_string(10);
-      T lock {fpath};
-      lock.unlock_shared();
-    })
-    .add_test("duplicate", [&](){
-      auto fpath = tmp_fd / test_lib::random_string(10);
-      T lock {fpath};
-      T lock_dup {fpath};
+      T lock{fpath};
+      T lock_dup{fpath};
     });
 }
 
 int main() {
   const std::filesystem::path tmp_fd{"tmp"};
   DirGuard dir_guard{tmp_fd};
-  test_lib::run_all_and_print(
-    mutex_tester<file_lock::FileMutex>("basic::BasicMutex", tmp_fd),
-    mutex_tester<file_lock::LargeFileMutex>("basic::LargeFileMutex", tmp_fd),
-    fuzzer_tester<file_lock::FileMutex>("fuzzer::BasicMutex", tmp_fd),
-    fuzzer_tester<file_lock::LargeFileMutex>("fuzzer::LargeFileMutex", tmp_fd),
-    undefined_behaviour_tester<file_lock::FileMutex>("undefined::BasicMutex", tmp_fd),
-    undefined_behaviour_tester<file_lock::LargeFileMutex>("undefined::LargeFileMutex", tmp_fd)
-  );
+  mutex_tester<file_lock::FileMutex>("basic::BasicMutex", tmp_fd).print_or_exit();
+  mutex_tester<file_lock::LargeFileMutex>("basic::LargeFileMutex", tmp_fd).print_or_exit();
+  fuzzer_tester<file_lock::FileMutex>("fuzzer::BasicMutex", tmp_fd).print_or_exit();
+  fuzzer_tester<file_lock::LargeFileMutex>("fuzzer::LargeFileMutex", tmp_fd).print_or_exit();
+  undefined_behaviour_tester<file_lock::FileMutex>("undefined::BasicMutex", tmp_fd)
+    .print_or_exit();
+  undefined_behaviour_tester<file_lock::LargeFileMutex>("undefined::LargeFileMutex", tmp_fd)
+    .print_or_exit();
 }
