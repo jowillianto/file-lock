@@ -346,8 +346,7 @@ int main() {
   mutex_tester<file_lock::LargeFileMutex>("basic::LargeFileMutex", tmp_fd).print_or_exit();
   fuzzer_tester<file_lock::FileMutex>("fuzzer::BasicMutex", tmp_fd).print_or_exit();
   fuzzer_tester<file_lock::LargeFileMutex>("fuzzer::LargeFileMutex", tmp_fd).print_or_exit();
-  undefined_behaviour_tester<file_lock::FileMutex>("undefined::BasicMutex", tmp_fd)
-    .print_or_exit();
+  undefined_behaviour_tester<file_lock::FileMutex>("undefined::BasicMutex", tmp_fd).print_or_exit();
   undefined_behaviour_tester<file_lock::LargeFileMutex>("undefined::LargeFileMutex", tmp_fd)
     .print_or_exit();
 }

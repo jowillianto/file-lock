@@ -37,11 +37,11 @@ namespace file_lock {
     }
 
     void lock_shared() const {
-
+      _mutex.lock_shared();
       _file_lock.lock_shared();
     }
     void unlock_shared() const {
-
+      _file_lock.unlock_shared();
       _mutex.unlock_shared();
     }
     bool try_lock_shared() const {
