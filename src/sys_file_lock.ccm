@@ -15,20 +15,20 @@ namespace file_lock {
     std::filesystem::path _file_path;
     int _fd;
 
-    void _throw_sys_error() const {
+    void _throw_sys_error(int err_no) const {
       throw std::filesystem::filesystem_error{
-        _file_path, std::error_code{errno, std::generic_category()}
+        _file_path, std::error_code{err_no, std::generic_category()}
       };
     }
     void _open_file_and_absol_path(int additional_flags) {
       if (!std::filesystem::exists(_file_path)) {
         _fd = open(_file_path.c_str(), O_CREAT | O_RDWR, 0664);
-        if (_fd == -1) _throw_sys_error();
+        if (_fd == -1) _throw_sys_error(errno);
         close(_fd);
       }
       _file_path = std::filesystem::absolute(_file_path);
       _fd = open(_file_path.c_str(), O_RDONLY);
-      if (_fd == -1) _throw_sys_error();
+      if (_fd == -1) _throw_sys_error(errno);
     }
 
   public:
