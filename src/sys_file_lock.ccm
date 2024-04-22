@@ -38,11 +38,11 @@ namespace file_lock {
 
     void lock() const {
       int lock_st = flock(_fd, LOCK_EX);
-      if (lock_st == -1) _throw_sys_error();
+      if (lock_st == -1) _throw_sys_error(errno);
     }
     void unlock() const {
       int lock_st = flock(_fd, LOCK_UN);
-      if (lock_st == -1) _throw_sys_error();
+      if (lock_st == -1) _throw_sys_error(errno);
     }
     bool try_lock() const {
       int lock_st = flock(_fd, LOCK_EX | LOCK_NB);
@@ -51,7 +51,7 @@ namespace file_lock {
 
     void lock_shared() const {
       int lock_st = flock(_fd, LOCK_SH);
-      if (lock_st == -1) _throw_sys_error();
+      if (lock_st == -1) _throw_sys_error(errno);
     }
     void unlock_shared() const {
       unlock();
@@ -64,7 +64,7 @@ namespace file_lock {
     ~SysFileLock() {
       if (_fd != -1) {
         int close_st = close(_fd);
-        if (close_st == -1) _throw_sys_error();
+        if (close_st == -1) _throw_sys_error(errno);
       }
     }
   };
