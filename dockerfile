@@ -6,7 +6,7 @@ RUN apt update && apt install -y \
   clang-tools-18 \
   ninja-build \
   python3-dev \
-  libboost-all
+  libboost-all-dev
 
 WORKDIR /app
 COPY . .
