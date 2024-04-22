@@ -10,7 +10,6 @@
 #include <sstream>
 #include <system_error>
 #include <thread>
-#include <type_traits>
 #include <unistd.h>
 import test_lib;
 import file_lock;

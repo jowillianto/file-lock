@@ -45,8 +45,3 @@ target_link_libraries(multiprocessing_file_lock_tests
   test_lib 
   multiprocessing_fileLock
 )
-target_compile_options(
-  multiprocessing_file_lock_tests 
-  PUBLIC 
-    "-Ofast"
-)

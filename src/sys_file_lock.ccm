@@ -19,7 +19,7 @@ namespace file_lock {
 
     void _throw_sys_error() const {
       throw std::filesystem::filesystem_error{
-        std::strerror(errno), _file_path, std::error_code{errno, std::generic_category()}
+        _file_path, std::error_code{errno, std::generic_category()}
       };
     }
     void _open_file_and_absol_path(int additional_flags) {
