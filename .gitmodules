@@ -1,3 +1,7 @@
 [submodule "lib/test-lib"]
 	path = lib/test-lib
 	url = https://github.com/jowillianto/test-lib
+[submodule "lib/pybind11"]
+	path = lib/pybind11
+	url = ../../pybind/pybind11
+	branch = stable
