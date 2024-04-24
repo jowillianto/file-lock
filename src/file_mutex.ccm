@@ -6,18 +6,64 @@ module;
 #include <filesystem>
 #include <shared_mutex>
 #include <unistd.h>
+#include <map>
 export module file_lock:basic_mutex;
 import :shared_mutex;
 import :sys_file_lock;
 
 namespace file_lock {
+  struct MutexStore {
+      /*
+        Get a mutex for the given path, insert a mutex if required, the path will be sanitized 
+        before using.
+      */
+      std::shared_mutex& get_mutex(const std::filesystem::path& fpath) {
+        auto abs_path = std::filesystem::absolute(fpath);
+        /*
+          Try reading from the map
+        */
+        auto read_mutex = read(abs_path);
+        if (read_mutex.has_value())
+          return *(read_mutex.value());
+        return write(abs_path);
+      }
+      /*
+        Reads from the map, this guarantees write atomicity and will write into the map. If you 
+        don't know if the key exists in the map already, use get_mutex as it is more efficient.
+        Guarantees safe writing into the map.
+      */
+      std::shared_mutex& write(const std::filesystem::path& abs_path) {
+        std::unique_lock l {_mut};
+        return _store[abs_path];
+      }
+      /*
+        Reads from the map, this guarantees atomicity of the read and guarantees that the returned 
+        optional if it contains a value, will point to a valid mutex. Takes an absolute path as the
+        argument, will behave in an undefined manner if a relative path (like accidentally creating 
+        a new lock). Guarantees that no new key will be inserted into the map.
+      */
+      std::optional<std::shared_mutex*> read(const std::filesystem::path& abs_path) const {
+        std::shared_lock l {_mut};
+        auto entry = _store.find(abs_path);
+        if (entry == _store.end())
+          return std::nullopt;
+        return &(entry -> second);
+      }
+    private:
+      mutable std::map<std::filesystem::path, std::shared_mutex, std::less<> > _store;
+      mutable std::shared_mutex _mut;
+  };
   export class FileMutex {
   private:
-    mutable std::shared_mutex _mutex;
+    static MutexStore _mutStore;
     SysFileLock _file_lock;
+    std::shared_mutex& _mutex;
 
   public:
-    FileMutex(const std::filesystem::path &file_path) : _file_lock{file_path} {}
+    FileMutex(const std::filesystem::path &file_path) : 
+      _file_lock{file_path}, 
+      _mutex { FileMutex::_mutStore.get_mutex(file_path) }
+    {}
 
     void lock() const {
       _mutex.lock();
@@ -53,6 +99,7 @@ namespace file_lock {
       return true;
     }
   };
+  MutexStore FileMutex::_mutStore{};
 
   static_assert(SharedMutex<FileMutex>);
 };

@@ -65,6 +65,7 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
         T file_mutex{file_path};
         // Lock File in another thread
         SafeThread thread{std::thread{[&]() mutable {
+          T file_mutex{file_path};
           file_mutex.lock();
           std::this_thread::sleep_for(std::chrono::seconds(3));
           file_mutex.unlock();
@@ -82,6 +83,7 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
         std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
         T file_mutex{file_path};
         SafeThread thread{std::thread{[&]() mutable {
+          T file_mutex{file_path};
           file_mutex.try_lock_shared();
           std::this_thread::sleep_for(std::chrono::seconds{3});
           file_mutex.unlock_shared();
@@ -100,6 +102,7 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
         std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
         T file_mutex{file_path};
         SafeThread thread{std::thread{[&]() mutable {
+          T file_mutex{file_path};
           file_mutex.try_lock_shared();
           std::this_thread::sleep_for(std::chrono::seconds{3});
           file_mutex.unlock_shared();
@@ -117,6 +120,7 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
         std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
         T file_mutex{file_path};
         SafeThread thread{std::thread{[&]() mutable {
+          T file_mutex{file_path};
           std::shared_lock lock{file_mutex};
           std::this_thread::sleep_for(std::chrono::seconds{3});
         }}};
@@ -134,6 +138,7 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
         T file_mutex{file_path};
         // Lock File in another thread
         SafeThread thread{std::thread{[&]() mutable {
+          T file_mutex{file_path};
           std::unique_lock lock{file_mutex};
           std::this_thread::sleep_for(std::chrono::seconds{3});
         }}};
@@ -279,6 +284,7 @@ auto fuzzer_tester(const std::string &test_suite, const std::filesystem::path &t
     thread_list.reserve(thread_count);
     for (uint32_t i = 0; i < thread_count; i += 1) {
       thread_list.emplace_back(std::thread{[&]() mutable {
+        T file_mutex{file_path};
         uint32_t todo = test_lib::random_integer(0, 1);
         std::this_thread::sleep_for(std::chrono::milliseconds{test_lib::random_integer(0, 10)});
         if (todo == 0) {
