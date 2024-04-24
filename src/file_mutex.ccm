@@ -55,16 +55,18 @@ namespace file_lock {
       mutable std::map<std::filesystem::path, std::shared_mutex, std::less<> > _store;
       mutable std::shared_mutex _mut;
   };
+
+  MutexStore mutex_store;
+
   export class FileMutex {
   private:
-    static MutexStore _mutStore;
     SysFileLock _file_lock;
     std::shared_mutex& _mutex;
 
   public:
     FileMutex(const std::filesystem::path &file_path) : 
       _file_lock{file_path}, 
-      _mutex { FileMutex::_mutStore.get_mutex(file_path) }
+      _mutex { mutex_store.get_mutex(file_path) }
     {}
 
     void lock() const {
@@ -101,7 +103,5 @@ namespace file_lock {
       return true;
     }
   };
-  MutexStore FileMutex::_mutStore{};
-
   static_assert(SharedMutex<FileMutex>);
 };
