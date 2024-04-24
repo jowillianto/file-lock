@@ -56,7 +56,8 @@ namespace file_lock {
       mutable std::shared_mutex _mut;
   };
 
-  MutexStore mutex_store;
+  extern MutexStore mutex_store;
+  MutexStore mutex_store{};
 
   export class FileMutex {
   private:
