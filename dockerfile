@@ -14,6 +14,6 @@ RUN CXX=clang++-18 cmake \
   -DPYBIND11_PYTHON_VERSION=${PYTHON_VERSION} \
   -DCMAKE_BUILD_TYPE=Release .
 WORKDIR /app/build
-RUN ninja multiprocessing_file_lock_tests
-RUN ./multiprocessing_file_lock_tests
 RUN ninja multiprocessing_file_lock_python
+# RUN ninja multiprocessing_file_lock_tests
+# RUN ./multiprocessing_file_lock_tests

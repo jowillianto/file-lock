@@ -18,9 +18,11 @@ target_sources(multiprocessing_fileLock
 )
 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/pybind11 EXCLUDE_FROM_ALL)
-add_library(
-  multiprocessing_file_lock_python SHARED EXCLUDE_FROM_ALL
-  ${CMAKE_CURRENT_LIST_DIR}/python_wrapper/file_lock.cpp
+add_library(multiprocessing_file_lock_python SHARED EXCLUDE_FROM_ALL)
+target_sources(multiprocessing_file_lock_python
+  PUBLIC
+    ${CMAKE_CURRENT_LIST_DIR}/python_wrapper/file_lock.cpp
+  PUBLIC FILE_SET CXX_MODULES FILES ${file_lock_ccm}
 )
 target_include_directories(multiprocessing_file_lock_python 
   PUBLIC 
@@ -29,12 +31,12 @@ target_include_directories(multiprocessing_file_lock_python
 )
 target_link_libraries(multiprocessing_file_lock_python 
     ${pybind11_LIBRARIES}
-    multiprocessing_fileLock 
     pybind11::module
 )
 set_target_properties(multiprocessing_file_lock_python PROPERTIES PREFIX "")
 set_target_properties(multiprocessing_file_lock_python PROPERTIES OUTPUT_NAME file_lock)
 set_target_properties(multiprocessing_file_lock_python PROPERTIES SUFFIX ".so")
+target_compile_options(multiprocessing_file_lock_python PRIVATE "-fPIC")
 
 add_subdirectory(lib/test-lib EXCLUDE_FROM_ALL)
 add_executable(
