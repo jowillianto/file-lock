@@ -6,6 +6,7 @@ module;
 #include <filesystem>
 #include <shared_mutex>
 #include <unistd.h>
+#include <optional>
 #include <map>
 export module file_lock:basic_mutex;
 import :shared_mutex;
