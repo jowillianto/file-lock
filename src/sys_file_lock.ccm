@@ -54,7 +54,7 @@ namespace file_lock {
       int lock_st = flock(_fd, LOCK_UN);
       if (lock_st == -1) _throw_sys_error(errno);
     }
-    bool try_lock() const {
+    bool try_lock() const noexcept {
       int lock_st = flock(_fd, LOCK_EX | LOCK_NB);
       return lock_st != -1;
     }
@@ -66,7 +66,7 @@ namespace file_lock {
     void unlock_shared() const {
       unlock();
     }
-    bool try_lock_shared() const {
+    bool try_lock_shared() const noexcept {
       int lock_st = flock(_fd, LOCK_SH | LOCK_NB);
       return lock_st != -1;
     }

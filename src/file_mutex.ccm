@@ -71,14 +71,18 @@ namespace file_lock {
     {}
 
     void lock() const {
-      _mutex.lock();
+      // This ensures that if _file_lock throws an exception. The mutex will not be corrupted. 
+      // i.e. in an indeterminate state.
+      std::unique_lock l { _mutex };
+      // Exception can be thrown here.
       _file_lock.lock();
+      l.release();
     }
     void unlock() const {
       _file_lock.unlock();
       _mutex.unlock();
     }
-    bool try_lock() const {
+    bool try_lock() const noexcept{
       if (!_mutex.try_lock()) return false;
       if (!_file_lock.try_lock()) {
         _mutex.unlock();
@@ -88,14 +92,18 @@ namespace file_lock {
     }
 
     void lock_shared() const {
-      _mutex.lock_shared();
+      // This ensures that if _file_lock throws an exception. The mutex will be unlocked to restore
+      // the mutex state.
+      std::shared_lock l {_mutex};
+      // Exception can be thrown here
       _file_lock.lock_shared();
+      l.release();
     }
     void unlock_shared() const {
       _file_lock.unlock_shared();
       _mutex.unlock_shared();
     }
-    bool try_lock_shared() const {
+    bool try_lock_shared() const noexcept{
       if (!_mutex.try_lock_shared()) return false;
       if (!_file_lock.try_lock_shared()) {
         _mutex.unlock_shared();
