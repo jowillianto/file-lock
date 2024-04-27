@@ -36,12 +36,11 @@ namespace file_lock {
         if (_fd == -1) _throw_sys_error(errno);
         close(_fd);
       }
-      // Store the absolute path
-      _file_path = std::filesystem::absolute(_file_path);
     }
 
   public:
-    SysFileLock(const std::filesystem::path &file_path) : _file_path{file_path} {
+    SysFileLock(const std::filesystem::path &file_path) :
+      _file_path{std::filesystem::absolute(file_path)} {
       _validate_file_path();
       _open_file(0);
     }
