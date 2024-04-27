@@ -228,7 +228,8 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
 template <file_lock::SharedMutex T>
   requires(std::constructible_from<T, std::filesystem::path>)
 auto fuzzer_tester(const std::string &test_suite, const std::filesystem::path &tmp_fd) {
-  return test_lib::Tester{test_suite}.add_test("fuzz_test", [&]() {
+  return test_lib::Tester{test_suite}
+    .add_test("fuzz_test", [&]() {
     std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
     std::string random_value = test_lib::random_string(1500);
     std::fstream file{file_path, std::ios_base::out | std::ios_base::trunc};
@@ -313,7 +314,7 @@ auto fuzzer_tester(const std::string &test_suite, const std::filesystem::path &t
         throw std::bad_exception{};
       }
     }
-  });
+    });
 }
 
 template <file_lock::SharedMutex T>
@@ -344,6 +345,19 @@ auto undefined_behaviour_tester(
       T lock_dup{fpath};
     });
 }
+
+auto mutex_store_tester = 
+  test_lib::Tester { "mutex_store_tester" }
+    .add_test("test_write", [](){
+      auto store = file_lock::MutexStore{ 10, 10 };
+      auto fpath = std::filesystem::path { test_lib::random_string(10) };
+      std::shared_mutex& mutex = store.get_mutex(fpath);
+      std::shared_mutex& mutex_2 = store.get_mutex(fpath);
+    })
+    .add_test("test_read", [](){})
+    .add_test("test_rw", [](){})
+    .add_test("test_fuzz", [](){})
+    .add_test("test_gc", [](){});
 
 int main() {
   const std::filesystem::path tmp_fd{"tmp"};
