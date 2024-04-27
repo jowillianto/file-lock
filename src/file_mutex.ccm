@@ -22,6 +22,9 @@ namespace file_lock {
   /*
     MutexStore stores the shared mutexes used for FileMutex. This allows multiple threads to access
     the same shared_mutex given the same ABSOLUTE file path.
+    @param record_size : denotes the maximum size of the record
+    @param tolerance : denotes the threshold after which the garbage collector should run. I.e. the garbage collector
+      will run when the size of the store reaches record_size + tolerance
   */
   export struct MutexStore {
     MutexStore(size_t record_size = 5000, size_t tolerance = 100) :
@@ -43,7 +46,8 @@ namespace file_lock {
     /*
       Reads from the map, this guarantees write atomicity and will write into the map. If you
       don't know if the key exists in the map already, use get_mutex as it is more efficient.
-      Guarantees safe writing into the map. 
+      Guarantees safe writing into the map.
+      @param abs_path : the absolute path to the file which mutex we want to access
     */
     std::shared_mutex &write(const std::filesystem::path &abs_path) {
       std::unique_lock l{_mut};
@@ -55,6 +59,7 @@ namespace file_lock {
       optional if it contains a value, will point to a valid mutex. Takes an absolute path as the
       argument, will behave in an undefined manner if a relative path (like accidentally creating
       a new lock). Guarantees that no new key will be inserted into the map.
+      @param abs_path : the absolute path to the file which mutex we want to access
     */
     std::optional<std::shared_mutex *> read(const std::filesystem::path &abs_path) const {
       std::shared_lock l{_mut};
@@ -64,7 +69,7 @@ namespace file_lock {
     }
     ~MutexStore() { 
       /*
-        Signal the garbage collector to join.
+        Signals the garbage collector to join.
       */
       _alive.store(false, std::memory_order::release);
       _clean_sig.notify_one();
@@ -130,8 +135,11 @@ namespace file_lock {
     }
   };
 
-  extern MutexStore mutex_store;
-  MutexStore mutex_store{};
+  /*
+   * A Mutex store for use with FileMutex, this store is only visible in the context of this file as it should not be
+   * modifiable by people outside
+   * */
+  static MutexStore mutex_store {};
 
   export class FileMutex {
   private:
