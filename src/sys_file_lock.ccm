@@ -69,6 +69,12 @@ namespace file_lock {
       int lock_st = flock(_fd, LOCK_SH | LOCK_NB);
       return lock_st != -1;
     }
+    
+    /*
+      Explicitly delete.
+    */
+    SysFileLock& operator = (const SysFileLock& other) = delete;
+    SysFileLock& operator = (const SysFileLock&& other) = delete;
 
     ~SysFileLock() {
       if (_fd != -1) {
