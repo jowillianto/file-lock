@@ -1,9 +1,10 @@
 module;
 #include <sys/fcntl.h>
-#include <algorithm>
 #include <sys/file.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
+#include <algorithm>
+#include <atomic>
 #include <condition_variable>
 #include <filesystem>
 #include <map>
@@ -13,159 +14,45 @@ module;
 #include <shared_mutex>
 #include <thread>
 #include <unistd.h>
-#include <atomic>
 export module file_lock:basic_mutex;
 import :shared_mutex;
 import :sys_file_lock;
+import :mutex_store;
 
 namespace file_lock {
-  /*
-    MutexStore stores the shared mutexes used for FileMutex. This allows multiple threads to access
-    the same shared_mutex given the same ABSOLUTE file path.
-    @param record_size : denotes the maximum size of the record
-    @param tolerance : denotes the threshold after which the garbage collector should run. I.e. the garbage collector
-      will run when the size of the store reaches record_size + tolerance
-  */
-  export struct MutexStore {
-    MutexStore(size_t record_size = 5000, size_t tolerance = 100) :
-      _record_size{record_size}, _tolerance(tolerance),
-      _garbage_collector(&MutexStore::_garbage_collector, this) {}
-    /*
-      Get a mutex for the given path, insert a mutex if required, the path will be sanitized
-      before using.
-    */
-    std::shared_mutex &get_mutex(const std::filesystem::path &fpath) {
-      auto abs_path = std::filesystem::absolute(fpath);
-      /*
-        Try reading from the map
-      */
-      auto read_mutex = read(abs_path);
-      if (read_mutex.has_value()) return *(read_mutex.value());
-      return write(abs_path);
-    }
-    /*
-      Reads from the map, this guarantees write atomicity and will write into the map. If you
-      don't know if the key exists in the map already, use get_mutex as it is more efficient.
-      Guarantees safe writing into the map.
-      @param abs_path : the absolute path to the file which mutex we want to access
-    */
-    std::shared_mutex &write(const std::filesystem::path &abs_path) {
-      std::unique_lock l{_mut};
-      if (_is_oversize(l)) _clean_sig.notify_one();
-      return _stamp(_store[abs_path]).m;
-    }
-    /*
-      Reads from the map, this guarantees atomicity of the read and guarantees that the returned
-      optional if it contains a value, will point to a valid mutex. Takes an absolute path as the
-      argument, will behave in an undefined manner if a relative path (like accidentally creating
-      a new lock). Guarantees that no new key will be inserted into the map.
-      @param abs_path : the absolute path to the file which mutex we want to access
-    */
-    std::optional<std::shared_mutex *> read(const std::filesystem::path &abs_path) const {
-      std::shared_lock l{_mut};
-      auto entry = _store.find(abs_path);
-      if (entry == _store.end()) return std::nullopt;
-      return &_stamp(entry->second).m;
-    }
-    ~MutexStore() { 
-      /*
-        Signals the garbage collector to join.
-      */
-      _alive.store(false, std::memory_order::release);
-      _clean_sig.notify_one();
-      _garbage_collector.join();
-    }
-
-  private:
-    struct StampedMutex {
-      std::shared_mutex m;
-      mutable std::chrono::time_point<std::chrono::system_clock> tp;
-    };
-    mutable std::map<std::filesystem::path, StampedMutex, std::less<>> _store;
-    mutable std::shared_mutex _mut;
-    std::condition_variable_any _clean_sig;
-    size_t _record_size;
-    size_t _tolerance;
-    std::thread _garbage_collector;
-    std::atomic_bool _alive;
-
-    /*
-      Garbage Collection Function
-    */
-    void _clean_store() {
-      std::unique_lock l{_mut};
-      /*
-        Perform cleaning as long as everyone is alive and healthy.
-      */
-      while (_alive.load(std::memory_order::acquire)){
-        _clean_sig.wait(l);
-        size_t to_delete_count = _store.size() - _tolerance;
-        // Iterate over all and remove the oldest mutexes.
-        for (size_t i = 0; i < to_delete_count; i += 1) {
-          auto tp_view = std::ranges::views::transform(
-            _store,
-            [](const std::pair<const std::filesystem::path, StampedMutex> & p){
-              return (p.second).tp;
-            }
-          );
-          auto min_elem = std::ranges::min_element( tp_view );
-          // Lock Mutex to Prevent Dropping Mutexes while other people are using the mutex.
-          // Since this call might block, this call can fail.
-          std::unique_lock l { (min_elem.base() -> second).m };
-          _store.erase( min_elem.base() );
-        }
-      }
-    }
-    /*
-      Checks if the map is oversized. Requires a lock to function as it needs to read map properties
-    */
-    template <template <typename> typename L, typename T>
-      requires(std::same_as<L<T>, std::unique_lock<T>> || std::same_as<L<T>, std::shared_lock<T>>)
-    bool _is_oversize(L<T> &l) const {
-      size_t map_size = _store.size();
-      return map_size >= _record_size + _tolerance;
-    }
-    /*
-      Stamp timestamp.
-      Returns a reference to the same object.
-    */
-    StampedMutex &_stamp(StampedMutex &stamped_mut) const {
-      stamped_mut.tp = std::chrono::system_clock::now();
-      return stamped_mut;
-    }
-  };
-
-  /*
-   * A Mutex store for use with FileMutex, this store is only visible in the context of this file as it should not be
-   * modifiable by people outside
-   * */
-  static MutexStore mutex_store {};
-
+  static MutexStore mutex_store;
   export class FileMutex {
   private:
     SysFileLock _file_lock;
-    std::shared_mutex &_mutex;
+    std::shared_ptr<std::shared_mutex> _mutex;
 
   public:
-    FileMutex(const std::filesystem::path &file_path) :
-      _file_lock{file_path}, _mutex{mutex_store.get_mutex(file_path)} {}
+    /*
+      Construct a FileMutex, note that however, it is possible to provide a mutex store but this is 
+      not recommended unless specific capacity settings are going to be changed.
+    */
+    FileMutex(
+      const std::filesystem::path &file_path, 
+      MutexStore& store = mutex_store
+    ) :
+      _file_lock{file_path}, _mutex{store.get_mutex(file_path)} {}
 
     void lock() const {
       // This ensures that if _file_lock throws an exception. The mutex will not be corrupted.
       // i.e. in an indeterminate state.
-      std::unique_lock l{_mutex};
+      std::unique_lock l{ *_mutex };
       // Exception can be thrown here.
       _file_lock.lock();
       l.release();
     }
     void unlock() const {
       _file_lock.unlock();
-      _mutex.unlock();
+      _mutex -> unlock();
     }
     bool try_lock() const noexcept {
-      if (!_mutex.try_lock()) return false;
+      if (!_mutex -> try_lock()) return false;
       if (!_file_lock.try_lock()) {
-        _mutex.unlock();
+        _mutex -> unlock();
         return false;
       }
       return true;
@@ -174,19 +61,19 @@ namespace file_lock {
     void lock_shared() const {
       // This ensures that if _file_lock throws an exception. The mutex will be unlocked to restore
       // the mutex state.
-      std::shared_lock l{_mutex};
+      std::shared_lock l{ *_mutex };
       // Exception can be thrown here
       _file_lock.lock_shared();
       l.release();
     }
     void unlock_shared() const {
       _file_lock.unlock_shared();
-      _mutex.unlock_shared();
+      _mutex -> unlock_shared();
     }
     bool try_lock_shared() const noexcept {
-      if (!_mutex.try_lock_shared()) return false;
+      if (!_mutex -> try_lock_shared()) return false;
       if (!_file_lock.try_lock_shared()) {
-        _mutex.unlock_shared();
+        _mutex -> unlock_shared();
         return false;
       }
       return true;

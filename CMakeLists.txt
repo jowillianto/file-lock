@@ -53,4 +53,15 @@ if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/lib/test-lib/CMakeLists.txt)
       test_lib 
       multiprocessing_file_lock
   )
+  add_executable(multiprocessing_file_lock_test_leak_check
+    EXCLUDE_FROM_ALL 
+    ${CMAKE_CURRENT_LIST_DIR}/tests/tests.cpp
+  )
+  target_link_libraries(multiprocessing_file_lock_test_leak_check
+    PRIVATE
+      test_lib 
+      multiprocessing_file_lock
+  )
+  target_compile_options(multiprocessing_file_lock_test_leak_check PRIVATE "-fsanitize=address")
+  target_link_options(multiprocessing_file_lock_test_leak_check PRIVATE "-fsanitize=address")
 endif()

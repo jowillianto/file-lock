@@ -228,8 +228,7 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
 template <file_lock::SharedMutex T>
   requires(std::constructible_from<T, std::filesystem::path>)
 auto fuzzer_tester(const std::string &test_suite, const std::filesystem::path &tmp_fd) {
-  return test_lib::Tester{test_suite}
-    .add_test("fuzz_test", [&]() {
+  return test_lib::Tester{test_suite}.add_test("fuzz_test", [&]() {
     std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
     std::string random_value = test_lib::random_string(1500);
     std::fstream file{file_path, std::ios_base::out | std::ios_base::trunc};
@@ -314,7 +313,7 @@ auto fuzzer_tester(const std::string &test_suite, const std::filesystem::path &t
         throw std::bad_exception{};
       }
     }
-    });
+  });
 }
 
 template <file_lock::SharedMutex T>
@@ -346,18 +345,70 @@ auto undefined_behaviour_tester(
     });
 }
 
-auto mutex_store_tester = 
-  test_lib::Tester { "mutex_store_tester" }
-    .add_test("test_write", [](){
-      auto store = file_lock::MutexStore{ 10, 10 };
-      auto fpath = std::filesystem::path { test_lib::random_string(10) };
-      std::shared_mutex& mutex = store.get_mutex(fpath);
-      std::shared_mutex& mutex_2 = store.get_mutex(fpath);
-    })
-    .add_test("test_read", [](){})
-    .add_test("test_rw", [](){})
-    .add_test("test_fuzz", [](){})
-    .add_test("test_gc", [](){});
+auto mutex_store_tester =
+  test_lib::Tester{"mutex_store_tester"}
+    .add_test(
+      "test_rw",
+      []() {
+        auto store = file_lock::MutexStore{10};
+        auto fpath = std::filesystem::path{test_lib::random_string(10)};
+        auto mutex = store.get_mutex(fpath);
+        auto mutex_2 = store.get_mutex(fpath);
+        test_lib::assert_equal(
+          static_cast<void *>(mutex.get()), static_cast<void *>(mutex_2.get())
+        );
+      }
+    )
+    .add_test(
+      "test_fuzz",
+      []() {
+        auto store = file_lock::MutexStore{10};
+        auto thread_count = test_lib::random_integer(20, 30);
+        auto path_count = test_lib::random_integer(20, 100);
+        auto per_thread_task = test_lib::random_integer(10, 20);
+        std::vector<std::thread> workers;
+        workers.reserve(thread_count);
+        std::vector<std::filesystem::path> paths;
+        paths.reserve(path_count);
+        for (size_t i = 0; i < path_count; i += 1)
+          paths.emplace_back(std::filesystem::path{test_lib::random_string(10)});
+        for (size_t i = 0; i < thread_count; i += 1)
+          workers.emplace_back(std::thread{[&]() {
+            // This ensure that the reference for mutexes are not gone. This will test the garbage
+            // collection.
+            std::vector<std::shared_ptr<std::shared_mutex>> mutexes;
+            mutexes.reserve(per_thread_task);
+            for (size_t i = 0; i < per_thread_task; i += 1) {
+              std::this_thread::sleep_for(
+                std::chrono::microseconds(test_lib::random_integer(50, 100))
+              );
+              int path_id = test_lib::random_integer(0, path_count - 1);
+              std::filesystem::path &fpath = paths.at(path_id);
+              // Randomly choose between saving or throwing away the mutex
+              auto mutex = store.get_mutex(fpath);
+              if (test_lib::random_real(0.0, 1.0) < 0.5) {
+                mutexes.emplace_back(std::move(mutex));
+              }
+            }
+          }});
+        for (auto &worker : workers)
+          worker.join();
+      }
+    )
+    .add_test("test_gc", []() {
+      auto store = file_lock::MutexStore{10};
+      for (size_t i = 0; i < 11; i += 1)
+        store.get_mutex(std::filesystem::path{test_lib::random_string(10)});
+      // There will be one reference left. 
+      /*
+        store size reaches 10.
+        write_new()
+        create_shared_for_current_path
+        garbage_collect prunes all old paths.
+        size is 1. 
+      */
+      test_lib::assert_equal(store.size(), 1);
+    });
 
 int main() {
   const std::filesystem::path tmp_fd{"tmp"};
@@ -369,4 +420,5 @@ int main() {
   undefined_behaviour_tester<file_lock::FileMutex>("undefined::BasicMutex", tmp_fd).print_or_exit();
   undefined_behaviour_tester<file_lock::LargeFileMutex>("undefined::LargeFileMutex", tmp_fd)
     .print_or_exit();
+  mutex_store_tester.print_or_exit();
 }

@@ -1,0 +1,139 @@
+module;
+#include <filesystem>
+#include <map>
+#include <optional>
+#include <memory>
+#include <mutex>
+#include <iterator>
+#include <shared_mutex>
+export module file_lock:mutex_store;
+import :shared_mutex;
+
+namespace file_lock {
+  /*
+    MutexStore stores the shared mutexes used for FileMutex. This allows multiple
+    threads to access the same shared_mutex given the same ABSOLUTE file path.
+    @param record_size : denotes the maximum size of the record. When the store
+    size exceeds this size, the store will start pruning old locks.
+  */
+  export struct MutexStore {
+    MutexStore(size_t record_size = 5000) :
+      _record_size{record_size}{}
+    /*
+      Get a mutex for the given path, insert a mutex if required, the path will be
+      sanitized before using.
+    */
+    std::shared_ptr<std::shared_mutex> get_mutex(const std::filesystem::path &fpath) {
+      auto abs_path = std::filesystem::absolute(fpath);
+      /*
+        Try reading from the map
+      */
+      auto read_mutex = read(abs_path);
+      /*
+        Steal the shared_ptr produced from read() to be returned (it is a
+        temporary anyway)
+      */
+      if (read_mutex.has_value()) return std::move(read_mutex.value());
+      return write(abs_path);
+    }
+    /*
+      Reads from the map, this guarantees write atomicity and will write into the
+      map. If you don't know if the key exists in the map already, use get_mutex
+      as it is more efficient. Guarantees safe writing into the map.
+      @param abs_path : the absolute path to the file which mutex we want to
+      access
+    */
+    std::shared_ptr<std::shared_mutex> write(const std::filesystem::path &abs_path) {
+      std::unique_lock l{_mut};
+      // Use reference, we want to replace the content of the pointer in the map.
+      auto& weak_ptr = _store[abs_path];
+      auto mutex_ptr = weak_ptr.lock();
+      if (static_cast<bool>(mutex_ptr)) {
+        
+        /* Perform garbage collection */
+        l.unlock();
+        l.release();
+        garbage_collect();
+
+        /* Return the obtained pointer */
+        return std::move(mutex_ptr);
+      } else {
+        // If the map fails to lock into the weak pointer, create a new mutex.
+        auto new_ptr = std::make_shared<std::shared_mutex>();
+        std::weak_ptr<std::shared_mutex> new_weak = new_ptr;
+        weak_ptr.swap(new_weak);
+        /* Clean Store if requires cleaning */
+        l.unlock();
+        l.release();
+        garbage_collect();
+        /* Return the new pointer */
+        return std::move(new_ptr);
+      }
+    }
+    /*
+      Reads from the map, this guarantees atomicity of the read and guarantees
+      that the returned optional if it contains a value, will point to a valid
+      mutex. Takes an absolute path as the argument, will behave in an undefined
+      manner if a relative path (like accidentally creating a new lock).
+      Guarantees that no new key will be inserted into the map.
+      @param abs_path : the absolute path to the file which mutex we want to
+      access
+    */
+    std::optional<std::shared_ptr<std::shared_mutex>> read(const std::filesystem::path &abs_path
+    ) const {
+      std::shared_lock l{_mut};
+      auto entry_it = _store.find(abs_path);
+      if (entry_it == _store.end()) return std::nullopt;
+      /*
+        Why lock() ? instead of expired check ?
+        It is possible to get a corrupted pointer because there might be interleaving AFTER calling
+        expired
+      */
+      auto mutex_ptr = (entry_it->second).lock();
+      if (static_cast<bool>(mutex_ptr)) return std::move(mutex_ptr);
+      return std::nullopt;
+    }
+
+    /*
+      Performs garbage collection on the mutex store. This will prune all empty weak pointers from
+      the map so that it does not take up space. 
+    */
+    void garbage_collect(bool force_clean = false) {
+      std::unique_lock l{_mut};
+      if (_require_cleaning(l) || force_clean)
+        std::erase_if(
+          _store, 
+          [](const std::pair<const std::filesystem::path, std::weak_ptr<std::shared_mutex>>& p) {
+            return p.second.expired();
+          }
+        );
+    }
+    /*
+      Get the maximum size of the current mutex store.
+    */
+    size_t maximum_size() const {
+      return _record_size;
+    }
+    /*
+      Get the true size of the current mutex store, keep in mind that the mutex store is accessed
+      from multiple thread and the current function will only give the size at the time of calling.
+    */
+    size_t size() const {
+      return _store.size();
+    }
+
+
+  private:
+    mutable std::map<std::filesystem::path, std::weak_ptr<std::shared_mutex>> _store;
+    mutable std::shared_mutex _mut;
+    size_t _record_size;
+
+    /*
+      Check if the store requires cleaning
+    */
+    template<typename mut>
+    bool _require_cleaning(std::unique_lock<mut>& l) const {
+      return _store.size() > _record_size;
+    }
+  };
+} // namespace file_lock

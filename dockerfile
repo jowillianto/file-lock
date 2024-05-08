@@ -15,5 +15,7 @@ RUN CXX=clang++-18 cmake \
   -DCMAKE_BUILD_TYPE=Release .
 WORKDIR /app/build
 RUN ninja multiprocessing_file_lock_python
-# RUN ninja multiprocessing_file_lock_tests
-# RUN ./multiprocessing_file_lock_tests
+# RUN ninja multiprocessing_file_lock_test
+# RUN ninja multiprocessing_file_lock_leak_check
+# RUN ./multiprocessing_file_lock_test
+# RUN ./multiprocessing_file_lock_leak_check
