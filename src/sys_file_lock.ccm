@@ -6,10 +6,10 @@ module;
 #include <filesystem>
 #include <system_error>
 #include <unistd.h>
-export module file_lock:sys_file_lock;
+export module moderna.file_lock:sys_file_lock;
 import :shared_mutex;
 
-namespace file_lock {
+namespace moderna::file_lock {
   export class SysFileLock {
   private:
     std::filesystem::path _file_path;

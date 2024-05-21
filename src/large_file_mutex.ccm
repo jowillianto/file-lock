@@ -1,12 +1,12 @@
 module;
 #include <filesystem>
 #include <unistd.h>
-export module file_lock:large_file_mutex;
+export module moderna.file_lock:large_file_mutex;
 import :shared_mutex;
 import :sys_file_lock;
 import :basic_mutex;
 
-namespace file_lock {
+namespace moderna::file_lock {
   export class LargeFileMutex {
   private:
     std::filesystem::path _file_path;

@@ -1,9 +1,9 @@
 module;
 #include <concepts>
 #include <filesystem>
-export module file_lock:shared_mutex;
+export module moderna.file_lock:shared_mutex;
 
-namespace file_lock {
+namespace moderna::file_lock {
   export template <typename Mutex>
   concept SharedMutex = requires(Mutex m) {
     { m.lock() };
