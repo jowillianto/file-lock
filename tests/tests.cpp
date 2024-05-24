@@ -221,11 +221,47 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
         test_lib::assert_equal(completed_process.value().exit_code(), 0);
       }
     )
-    .add_test("no_concurrent_multi_process_write_and_read", [&]() {
+    .add_test(
+      "no_concurrent_multi_process_write_and_read",
+      [&]() {
+        std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
+        T file_mutex{file_path};
+        std::unique_lock lock{file_mutex};
+        process::Process process_unique{process::StaticArgument{
+          TEST_CHILD,
+          file_path.string(),
+          []() {
+            if (std::same_as<T, file_lock::FileMutex>) return "f_mut";
+            else
+              return "lf_mut";
+          }(),
+          "test_not_unique_lockable"
+        }};
+        process::Process process_shared{process::StaticArgument{
+          TEST_CHILD,
+          file_path.string(),
+          []() {
+            if (std::same_as<T, file_lock::FileMutex>) return "f_mut";
+            else
+              return "lf_mut";
+          }(),
+          "test_not_shared_lockable"
+        }};
+        auto completed_process_unique = process_unique.wait();
+        auto completed_process_shared = process_shared.wait();
+        test_lib::assert_equal(completed_process_unique.value().exit_code(), 0);
+        test_lib::assert_equal(completed_process_shared.value().exit_code(), 0);
+      }
+    )
+    .add_test("unlock_flock_twice_in_a_thread", [&]() {
       std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
       T file_mutex{file_path};
-      std::unique_lock lock{file_mutex};
-      process::Process process_unique{process::StaticArgument{
+      T file_mutex2{file_path};
+      std::shared_lock lock{file_mutex};
+      std::shared_lock lock2{file_mutex2};
+      lock.unlock();
+      lock.release();
+      process::Process process{process::StaticArgument{
         TEST_CHILD,
         file_path.string(),
         []() {
@@ -235,20 +271,8 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
         }(),
         "test_not_unique_lockable"
       }};
-      process::Process process_shared{process::StaticArgument{
-        TEST_CHILD,
-        file_path.string(),
-        []() {
-          if (std::same_as<T, file_lock::FileMutex>) return "f_mut";
-          else
-            return "lf_mut";
-        }(),
-        "test_not_shared_lockable"
-      }};
-      auto completed_process_unique = process_unique.wait();
-      auto completed_process_shared = process_shared.wait();
-      test_lib::assert_equal(completed_process_unique.value().exit_code(), 0);
-      test_lib::assert_equal(completed_process_shared.value().exit_code(), 0);
+      auto completed_process = process.wait();
+      test_lib::assert_equal(completed_process.value().exit_code(), 0);
     });
 }
 
