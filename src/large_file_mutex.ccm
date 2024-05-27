@@ -16,7 +16,7 @@ namespace moderna::file_lock {
   public:
     LargeFileMutex(const std::filesystem::path &file_path) :
       _file_path(file_path),
-      _lock_file_path(file_path.parent_path() / (file_path.stem().string() + ".sys_lock")),
+      _lock_file_path(file_path.parent_path() / (file_path.filename().string() + ".sys_lock")),
       _file_lock(_lock_file_path) {}
 
     void lock() const {
