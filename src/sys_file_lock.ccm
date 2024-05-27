@@ -16,7 +16,8 @@ namespace moderna::file_lock {
     std::filesystem::path _file_path;
     int _fd;
 
-    void _throw_sys_error(int err_no, std::source_location loc) const {
+    void _throw_sys_error(int err_no, std::source_location loc = std::source_location::current())
+      const {
       throw std::filesystem::filesystem_error{
         loc.function_name(), _file_path, std::error_code{err_no, std::generic_category()}
       };
