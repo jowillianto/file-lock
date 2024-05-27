@@ -24,7 +24,7 @@ if (EXISTS ${CMAKE_CURRENT_LIST_DIR}/lib/pybind11/CMakeLists.txt)
   target_sources(moderna_file_lock_python
     PUBLIC
       ${CMAKE_CURRENT_LIST_DIR}/python_wrapper/file_lock.cpp
-    PUBLIC FILE_SET CXX_MODULES FILES ${file_lock_ccm}
+    PUBLIC FILE_SET CXX_MODULES FILES ${moderna_file_lock_src}
   )
   target_include_directories(moderna_file_lock_python 
     PUBLIC 
