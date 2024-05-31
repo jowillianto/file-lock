@@ -6,10 +6,10 @@ module;
 #include <mutex>
 #include <iterator>
 #include <shared_mutex>
-export module file_lock:mutex_store;
+export module moderna.file_lock:mutex_store;
 import :shared_mutex;
 
-namespace file_lock {
+namespace moderna::file_lock {
   /*
     MutexStore stores the shared mutexes used for FileMutex. This allows multiple
     threads to access the same shared_mutex given the same ABSOLUTE file path.

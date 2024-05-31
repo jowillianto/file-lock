@@ -1,10 +1,10 @@
 #include <pybind11/pybind11.h>
 #include <filesystem>
 #include <string>
-import file_lock;
+import moderna.file_lock;
 namespace py = pybind11;
 class PythonMutex{
-  file_lock::LargeFileMutex _internal_mutex;
+  moderna::file_lock::LargeFileMutex _internal_mutex;
   std::string _file_path;
   public:
     PythonMutex(const std::string& file_path) : 

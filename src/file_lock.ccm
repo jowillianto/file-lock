@@ -1,4 +1,4 @@
-export module file_lock;
+export module moderna.file_lock;
 export import :basic_mutex;
 export import :large_file_mutex;
 export import :shared_mutex;
