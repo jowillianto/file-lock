@@ -23,7 +23,7 @@ namespace moderna::file_lock {
       };
     }
     void _open_file(int additional_flags) {
-      _fd = open(_file_path.c_str(), O_RDWR | O_APPEND);
+      _fd = open(_file_path.c_str(), O_RDWR | O_APPEND | O_CLOEXEC);
       if (_fd == -1) _throw_sys_error(errno);
     }
     void _validate_file_path() {

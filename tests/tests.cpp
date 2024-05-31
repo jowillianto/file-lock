@@ -84,6 +84,29 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
         }
         cur_sender.send();
       }
+    )    
+    .add_test(
+      "no_concurrent_writes_same_object",
+      [&]() {
+        std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
+        T file_mutex{file_path};
+        auto thread_sender = thread_plus::channel::Channel<void>{};
+        auto cur_sender = thread_plus::channel::Channel<void>{};
+        // Lock File in another thread
+        SafeThread thread{std::thread{[&]() mutable {
+          file_mutex.lock();
+          thread_sender.send();
+          auto _ = cur_sender.recv();
+          file_mutex.unlock();
+        }}};
+        auto _ = thread_sender.recv();
+        if (file_mutex.try_lock()) {
+          file_mutex.unlock();
+          cur_sender.send();
+          throw std::bad_exception{};
+        }
+        cur_sender.send();
+      }
     )
     .add_test(
       "allow_concurrent_reads",
@@ -94,6 +117,31 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
         auto cur_sig = thread_plus::channel::Channel<void>{};
         SafeThread thread{std::thread{[&]() mutable {
           T file_mutex{file_path};
+          file_mutex.try_lock_shared();
+          // std::this_thread::sleep_for(std::chrono::milliseconds{300});
+          thread_sig.send();
+          auto _ = cur_sig.recv();
+          file_mutex.unlock_shared();
+        }}};
+        // std::this_thread::sleep_for(std::chrono::milliseconds{100});
+        auto _ = thread_sig.recv();
+        if (file_mutex.try_lock_shared()) {
+          cur_sig.send();
+          file_mutex.unlock_shared();
+          return;
+        }
+        cur_sig.send();
+        throw std::bad_exception{};
+      }
+    )
+    .add_test(
+      "allow_concurrent_reads_same_object",
+      [&]() {
+        std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
+        T file_mutex{file_path};
+        auto thread_sig = thread_plus::channel::Channel<void>{};
+        auto cur_sig = thread_plus::channel::Channel<void>{};
+        SafeThread thread{std::thread{[&]() mutable {
           file_mutex.try_lock_shared();
           // std::this_thread::sleep_for(std::chrono::milliseconds{300});
           thread_sig.send();
@@ -137,7 +185,32 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
       }
     )
     .add_test(
-      "std::shared_lock_consistency",
+      "no_concurrent_write_and_read_same_object",
+      [&]() {
+        std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
+        T file_mutex{file_path};
+        auto thread_sig = thread_plus::channel::Channel<void>{};
+        auto cur_sig = thread_plus::channel::Channel<void>{};
+        SafeThread thread{std::thread{[&]() mutable {
+          T file_mutex{file_path};
+          file_mutex.lock_shared();
+          thread_sig.send();
+          auto _ = cur_sig.recv();
+          // std::this_thread::sleep_for(std::chrono::milliseconds{300});
+          file_mutex.unlock_shared();
+        }}};
+        // std::this_thread::sleep_for(std::chrono::milliseconds{100});
+        auto _ = thread_sig.recv();
+        if (file_mutex.try_lock()) {
+          cur_sig.send();
+          file_mutex.unlock();
+          throw std::bad_exception{};
+        }
+        cur_sig.send();
+      }
+    )
+    .add_test(
+      "with std::shared_lock",
       [&]() {
         std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
         T file_mutex{file_path};
@@ -159,7 +232,28 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
       }
     )
     .add_test(
-      "std::unique_lock_consistency",
+      "with std::shared_lock same object",
+      [&]() {
+        std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
+        T file_mutex{file_path};
+        auto thread_sig = thread_plus::channel::Channel<void>{};
+        auto cur_sig = thread_plus::channel::Channel<void>{};
+        SafeThread thread{std::thread{[&]() mutable {
+          std::shared_lock lock{file_mutex};
+          thread_sig.send();
+          auto _ = cur_sig.recv();
+        }}};
+        auto _ = thread_sig.recv();
+        if (file_mutex.try_lock()) {
+          cur_sig.send();
+          file_mutex.unlock();
+          throw std::bad_exception{};
+        }
+        cur_sig.send();
+      }
+    )
+    .add_test(
+      "with std::unique_lock",
       [&]() {
         std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
         T file_mutex{file_path};
@@ -168,6 +262,28 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
         // Lock File in another thread
         SafeThread thread{std::thread{[&]() mutable {
           T file_mutex{file_path};
+          std::unique_lock lock{file_mutex};
+          thread_sig.send();
+          auto _ = cur_sig.recv();
+        }}};
+        auto _ = thread_sig.recv();
+        if (file_mutex.try_lock()) {
+          cur_sig.send();
+          file_mutex.unlock();
+          throw std::bad_exception{};
+        }
+        cur_sig.send();
+      }
+    )
+    .add_test(
+      "with std::unique_lock same object",
+      [&]() {
+        std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
+        T file_mutex{file_path};
+        auto thread_sig = thread_plus::channel::Channel<void>{};
+        auto cur_sig = thread_plus::channel::Channel<void>{};
+        // Lock File in another thread
+        SafeThread thread{std::thread{[&]() mutable {
           std::unique_lock lock{file_mutex};
           thread_sig.send();
           auto _ = cur_sig.recv();
