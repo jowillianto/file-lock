@@ -55,11 +55,16 @@ if(
   add_test_asan_tsan_usan_ubsan ( 
     moderna_file_lock_tests
     ${CMAKE_CURRENT_LIST_DIR}/tests/tests.cpp
-    "moderna_file_lock;moderna_test_lib;moderna_thread_plus;moderna_process"
-    "TEST_CHILD=\"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test_child\""
+    LIBRARIES 
+      moderna_file_lock 
+      moderna_test_lib 
+      moderna_thread_plus 
+      moderna_process
+    COMPILE_DEFINITIONS 
+      "TEST_CHILD=\"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test_child\""
   )
   add_executable(test_child ${CMAKE_CURRENT_LIST_DIR}/tests/test_child.cpp)
   target_link_libraries(test_child moderna_file_lock)
-else()
+elseif (PROJECT_IS_TOP_LEVEL)
   message("Test with moderna full library")
 endif()
