@@ -76,7 +76,18 @@ namespace moderna::file_lock {
       Explicitly delete.
     */
     SysFileLock &operator=(const SysFileLock &other) = delete;
-    SysFileLock &operator=(const SysFileLock &&other) = delete;
+    SysFileLock (const SysFileLock& other) = delete;
+
+    SysFileLock &operator=(SysFileLock &&other) {
+      if (_fd != -1) { close(_fd); _fd = -1;}
+      std::swap(_fd, other._fd);
+      _file_path = std::move(other._file_path);
+      return *this;
+    }
+    SysFileLock (SysFileLock&& other) {
+      std::swap(_fd, other._fd);
+      _file_path = std::move(other._file_path);
+    }
 
     ~SysFileLock() {
       if (_fd != -1) {
