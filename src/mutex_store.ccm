@@ -49,12 +49,8 @@ namespace moderna::file_lock {
       auto& weak_ptr = _store[abs_path];
       auto mutex_ptr = weak_ptr.lock();
       if (static_cast<bool>(mutex_ptr)) {
-        
-        /* Perform garbage collection */
-        l.unlock();
-        l.release();
-        garbage_collect();
-
+        /* Garbage collect if required */
+        _garbage_collect(false, l);
         /* Return the obtained pointer */
         return std::move(mutex_ptr);
       } else {
@@ -63,9 +59,7 @@ namespace moderna::file_lock {
         std::weak_ptr<std::shared_mutex> new_weak = new_ptr;
         weak_ptr.swap(new_weak);
         /* Clean Store if requires cleaning */
-        l.unlock();
-        l.release();
-        garbage_collect();
+        _garbage_collect(false, l);
         /* Return the new pointer */
         return std::move(new_ptr);
       }
@@ -100,13 +94,7 @@ namespace moderna::file_lock {
     */
     void garbage_collect(bool force_clean = false) {
       std::unique_lock l{_mut};
-      if (_require_cleaning(l) || force_clean)
-        std::erase_if(
-          _store, 
-          [](const std::pair<const std::filesystem::path, std::weak_ptr<std::shared_mutex>>& p) {
-            return p.second.expired();
-          }
-        );
+      _garbage_collect(force_clean, l);
     }
     /*
       Get the maximum size of the current mutex store.
@@ -127,6 +115,17 @@ namespace moderna::file_lock {
     mutable std::map<std::filesystem::path, std::weak_ptr<std::shared_mutex>> _store;
     mutable std::shared_mutex _mut;
     size_t _record_size;
+
+    template<typename mut_t>
+    void _garbage_collect(bool force_clean, std::unique_lock<mut_t>& l) {
+      if (_require_cleaning(l) || force_clean)
+        std::erase_if(
+          _store, 
+          [](const std::pair<const std::filesystem::path, std::weak_ptr<std::shared_mutex>>& p) {
+            return p.second.expired();
+          }
+        );
+    }
 
     /*
       Check if the store requires cleaning
