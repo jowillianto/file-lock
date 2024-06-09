@@ -3,6 +3,7 @@ module;
 #include <sys/file.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
+#include <atomic>
 #include <filesystem>
 #include <source_location>
 #include <system_error>
@@ -14,6 +15,7 @@ namespace moderna::file_lock {
   export class SysFileLock {
   private:
     std::filesystem::path _file_path;
+    mutable std::atomic<size_t> _holder_count;
     int _fd;
 
     void _throw_sys_error(int err_no, std::source_location loc = std::source_location::current())
@@ -39,6 +41,24 @@ namespace moderna::file_lock {
         close(_fd);
       }
     }
+    void _decrement_holder_count() const {
+      size_t expected_value = 1;
+      if (_holder_count.compare_exchange_strong(
+            expected_value, 0, std::memory_order::acq_rel, std::memory_order::relaxed
+          )) {
+        int lock_st = flock(_fd, LOCK_UN);
+        if (lock_st == -1) {
+          _increase_holder_count();
+          _throw_sys_error(errno);
+        }
+      }
+      else {
+        _holder_count.fetch_sub(1, std::memory_order::acq_rel);
+      }
+    }
+    void _increase_holder_count() const noexcept {
+      _holder_count.fetch_add(1, std::memory_order::relaxed);
+    }
 
   public:
     SysFileLock(const std::filesystem::path &file_path) :
@@ -50,25 +70,32 @@ namespace moderna::file_lock {
     void lock() const {
       int lock_st = flock(_fd, LOCK_EX);
       if (lock_st == -1) _throw_sys_error(errno);
+      _increase_holder_count();
     }
     void unlock() const {
-      int lock_st = flock(_fd, LOCK_UN);
-      if (lock_st == -1) _throw_sys_error(errno);
+      _decrement_holder_count();
+      // int lock_st = flock(_fd, LOCK_UN);
+      // if (lock_st == -1) _throw_sys_error(errno);
     }
     bool try_lock() const noexcept {
       int lock_st = flock(_fd, LOCK_EX | LOCK_NB);
+      if (lock_st != -1)
+        _increase_holder_count();
       return lock_st != -1;
     }
 
     void lock_shared() const {
       int lock_st = flock(_fd, LOCK_SH);
       if (lock_st == -1) _throw_sys_error(errno);
+      _increase_holder_count();
     }
     void unlock_shared() const {
       unlock();
     }
     bool try_lock_shared() const noexcept {
       int lock_st = flock(_fd, LOCK_SH | LOCK_NB);
+      if (lock_st != -1)
+        _increase_holder_count();
       return lock_st != -1;
     }
 
@@ -76,15 +103,18 @@ namespace moderna::file_lock {
       Explicitly delete.
     */
     SysFileLock &operator=(const SysFileLock &other) = delete;
-    SysFileLock (const SysFileLock& other) = delete;
+    SysFileLock(const SysFileLock &other) = delete;
 
     SysFileLock &operator=(SysFileLock &&other) {
-      if (_fd != -1) { close(_fd); _fd = -1;}
+      if (_fd != -1) {
+        close(_fd);
+        _fd = -1;
+      }
       std::swap(_fd, other._fd);
       _file_path = std::move(other._file_path);
       return *this;
     }
-    SysFileLock (SysFileLock&& other) {
+    SysFileLock(SysFileLock &&other) {
       std::swap(_fd, other._fd);
       _file_path = std::move(other._file_path);
     }

@@ -33,6 +33,8 @@ class SafeThread {
 
 public:
   SafeThread(std::thread &&thread) : _thread(std::move(thread)) {}
+  template<typename ...Args> requires std::is_constructible_v <std::thread, Args...> 
+  SafeThread(Args&& ...args) : _thread { std::forward<Args>(args)... } {}
   void detach() {
     _thread.detach();
   }
@@ -84,7 +86,7 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
         }
         cur_sender.send();
       }
-    )    
+    )
     .add_test(
       "no_concurrent_writes_same_object",
       [&]() {
@@ -369,6 +371,43 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
         test_lib::assert_equal(completed_process_shared.value().exit_code(), 0);
       }
     )
+    .add_test(
+      "unlock_reader_twice",
+      [&]() {
+        std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
+        T file_mutex{file_path};
+        auto unlock_sig = thread_plus::channel::Channel<void>{};
+        auto unlock_done_sig = thread_plus::channel::Channel<void>{};
+        auto exit_sig = thread_plus::channel::Channel<void>{};
+        SafeThread t1{[&]() {
+          std::shared_lock l1{file_mutex};
+          auto _ = unlock_sig.recv();
+          l1.unlock();
+          l1.release();
+          unlock_done_sig.send(1);
+          auto __ = exit_sig.recv();
+        }};
+        SafeThread t2{[&]() {
+          std::shared_lock l1{file_mutex};
+          unlock_sig.send(1);
+          auto _ = exit_sig.recv();
+        }};
+        auto _ = unlock_done_sig.recv();
+        process::Process process{process::StaticArgument{
+          TEST_CHILD,
+          file_path.string(),
+          []() {
+            if (std::same_as<T, file_lock::FileMutex>) return "f_mut";
+            else
+              return "lf_mut";
+          }(),
+          "test_not_unique_lockable"
+        }};
+        auto completed_process = process.wait();
+        exit_sig.send(2);
+        test_lib::assert_equal(completed_process.value().exit_code(), 0);
+      }
+    )
     .add_test("unlock_flock_twice_in_a_thread", [&]() {
       std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
       T file_mutex{file_path};
@@ -581,6 +620,7 @@ int main(int argc, char **argv, const char **envp) {
   process::Env::init_global(envp);
   const std::filesystem::path tmp_fd{"tmp"};
   DirGuard dir_guard{tmp_fd};
+  // mutex_tester<file_lock::FcntlMutex>("basic::FcntlMutex", tmp_fd).print_or_exit();
   mutex_tester<file_lock::FileMutex>("basic::BasicMutex", tmp_fd).print_or_exit();
   mutex_tester<file_lock::LargeFileMutex>("basic::LargeFileMutex", tmp_fd).print_or_exit();
   fuzzer_tester<file_lock::FileMutex>("fuzzer::BasicMutex", tmp_fd).print_or_exit();

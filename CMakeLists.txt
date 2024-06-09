@@ -44,17 +44,16 @@ endif()
 # TEST TARGET
 if(
   EXISTS ${CMAKE_CURRENT_LIST_DIR}/../test-lib/CMakeLists.txt 
-  AND EXISTS ${CMAKE_CURRENT_LIST_DIR}/../../cmake/CMakeLists.txt 
   AND PROJECT_IS_TOP_LEVEL
 )
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../test-lib test-lib)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../thread_plus thread_plus)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../process process)
   include (CTest)
-  include (${CMAKE_CURRENT_LIST_DIR}/../../cmake/CMakeLists.txt)
-  add_test_asan_tsan_usan_ubsan ( 
+  moderna_add_test ( 
     moderna_file_lock_tests
     ${CMAKE_CURRENT_LIST_DIR}/tests/tests.cpp
+    SANITIZERS all
     LIBRARIES 
       moderna_file_lock 
       moderna_test_lib 
