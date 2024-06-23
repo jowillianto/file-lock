@@ -47,7 +47,7 @@ if(
   AND PROJECT_IS_TOP_LEVEL
 )
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../test-lib test-lib)
-  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../thread_plus thread_plus)
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../thread-plus thread_plus)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../process process)
   include (CTest)
   moderna_add_test ( 
