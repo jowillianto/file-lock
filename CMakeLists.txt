@@ -6,17 +6,17 @@ set (CMAKE_CXX_SCAN_FOR_MODULES true)
 
 find_package(Python3 3.7 REQUIRED COMPONENTS Interpreter Development)
 
-add_library(moderna_file_lock)
-file (
-  GLOB moderna_file_lock_src
-  "${CMAKE_CURRENT_LIST_DIR}/src/*.ccm"
-)
-
-target_sources(moderna_file_lock
-  PUBLIC
-    FILE_SET CXX_MODULES FILES ${moderna_file_lock_src}
-)
-
+if (NOT ${PROJECT_NAME})
+  add_library(moderna_file_lock)
+  file (
+    GLOB moderna_file_lock_src
+    "${CMAKE_CURRENT_LIST_DIR}/src/*.ccm"
+  )
+  target_sources(moderna_file_lock
+    PUBLIC
+      FILE_SET CXX_MODULES FILES ${moderna_file_lock_src}
+  )
+endif()
 # PYTHON TARGET
 if (EXISTS ${CMAKE_CURRENT_LIST_DIR}/lib/pybind11/CMakeLists.txt)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/pybind11 EXCLUDE_FROM_ALL)
