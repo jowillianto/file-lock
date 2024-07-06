@@ -48,15 +48,9 @@ if(
   AND EXISTS ${CMAKE_CURRENT_LIST_DIR}/../process/CMakeLists.txt
   AND PROJECT_IS_TOP_LEVEL
 )
-  if (NOT moderna_test_lib)
-    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../test-lib test-lib)
-  endif()
-  if (NOT moderna_thread_plus)
-    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../thread_plus thread_plus)
-  endif()
-  if (NOT moderna_process)
-    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../process process)
-  endif()
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../test-lib test-lib)
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../thread_plus thread_plus)
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../process process)
   include (CTest)
   moderna_add_test ( 
     moderna_file_lock_tests
