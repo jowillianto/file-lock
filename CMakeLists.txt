@@ -6,7 +6,7 @@ set (CMAKE_CXX_SCAN_FOR_MODULES true)
 
 find_package(Python3 3.7 REQUIRED COMPONENTS Interpreter Development)
 
-if (NOT ${PROJECT_NAME})
+if (NOT TARGET ${PROJECT_NAME})
   add_library(moderna_file_lock)
   file (
     GLOB moderna_file_lock_src
