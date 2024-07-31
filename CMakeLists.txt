@@ -8,11 +8,11 @@ find_package(Python3 3.7 REQUIRED COMPONENTS Interpreter Development)
 
 add_library(${PROJECT_NAME})
 file (
-  GLOB moderna_file_lock_src
+  GLOB ${PROJECT_NAME}_src
   "${CMAKE_CURRENT_LIST_DIR}/src/*.ccm"
 )
 
-target_sources(moderna_file_lock
+target_sources(${PROJECT_NAME}
   PUBLIC
     FILE_SET CXX_MODULES FILES ${${PROJECT_NAME}_src}
 )
@@ -26,7 +26,7 @@ if (EXISTS ${CMAKE_CURRENT_LIST_DIR}/lib/pybind11/CMakeLists.txt)
       ${CMAKE_CURRENT_LIST_DIR}/python_wrapper/file_lock.cpp
     PUBLIC FILE_SET CXX_MODULES FILES ${${PROJECT_NAME}_src}
   )
-  target_include_directories(moderna_file_lock_python 
+  target_include_directories(${PROJECT_NAME}_python 
     PUBLIC 
       ${pybind11_INCLUDE_DIRS}
       ${Python_INCLUDE_DIRS}
@@ -44,6 +44,8 @@ endif()
 # TEST TARGET
 if(
   EXISTS ${CMAKE_CURRENT_LIST_DIR}/../test-lib/CMakeLists.txt 
+  AND EXISTS ${CMAKE_CURRENT_LIST_DIR}/../thread_plus/CMakeLists.txt
+  AND EXISTS ${CMAKE_CURRENT_LIST_DIR}/../process/CMakeLists.txt
   AND PROJECT_IS_TOP_LEVEL
 )
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../test-lib test-lib)
