@@ -4,8 +4,8 @@ module;
 export module moderna.file_lock:shared_mutex;
 
 namespace moderna::file_lock {
-  export template <typename Mutex>
-  concept SharedMutex = requires(Mutex m) {
+  export template <typename mut_t>
+  concept shared_mutex = requires(mut_t m) {
     { m.lock() };
     { m.unlock() };
     { m.try_lock() } -> std::same_as<bool>;

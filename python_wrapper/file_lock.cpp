@@ -4,7 +4,7 @@
 import moderna.file_lock;
 namespace py = pybind11;
 class PythonMutex{
-  moderna::file_lock::LargeFileMutex _internal_mutex;
+  moderna::file_lock::lf_mutex _internal_mutex;
   std::string _file_path;
   public:
     PythonMutex(const std::string& file_path) : 

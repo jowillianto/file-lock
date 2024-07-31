@@ -3,18 +3,18 @@ module;
 #include <unistd.h>
 export module moderna.file_lock:large_file_mutex;
 import :shared_mutex;
-import :sys_file_lock;
+import :sys_flock;
 import :basic_mutex;
 
 namespace moderna::file_lock {
-  export class LargeFileMutex {
+  export class lf_mutex {
   private:
     std::filesystem::path _file_path;
     std::filesystem::path _lock_file_path;
-    FileMutex _file_lock;
+    file_mutex _file_lock;
 
   public:
-    LargeFileMutex(const std::filesystem::path &file_path) :
+    lf_mutex(const std::filesystem::path &file_path) :
       _file_path(file_path),
       _lock_file_path(file_path.parent_path() / (file_path.filename().string() + ".sys_lock")),
       _file_lock(_lock_file_path) {}
@@ -40,5 +40,5 @@ namespace moderna::file_lock {
     }
   };
 
-  static_assert(SharedMutex<LargeFileMutex>);
+  static_assert(shared_mutex<lf_mutex>);
 };

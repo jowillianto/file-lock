@@ -8,11 +8,11 @@ module;
 #include <source_location>
 #include <system_error>
 #include <unistd.h>
-export module moderna.file_lock:sys_file_lock;
+export module moderna.file_lock:sys_flock;
 import :shared_mutex;
 
 namespace moderna::file_lock {
-  export class SysFileLock {
+  export class sys_flock {
   private:
     std::filesystem::path _file_path;
     mutable std::atomic<size_t> _holder_count;
@@ -61,7 +61,7 @@ namespace moderna::file_lock {
     }
 
   public:
-    SysFileLock(const std::filesystem::path &file_path) :
+    sys_flock(const std::filesystem::path &file_path) :
       _file_path{std::filesystem::absolute(file_path)} {
       _validate_file_path();
       _open_file(0);
@@ -102,10 +102,10 @@ namespace moderna::file_lock {
     /*
       Explicitly delete.
     */
-    SysFileLock &operator=(const SysFileLock &other) = delete;
-    SysFileLock(const SysFileLock &other) = delete;
+    sys_flock &operator=(const sys_flock &other) = delete;
+    sys_flock(const sys_flock &other) = delete;
 
-    SysFileLock &operator=(SysFileLock &&other) {
+    sys_flock &operator=(sys_flock &&other) {
       if (_fd != -1) {
         close(_fd);
         _fd = -1;
@@ -114,17 +114,17 @@ namespace moderna::file_lock {
       _file_path = std::move(other._file_path);
       return *this;
     }
-    SysFileLock(SysFileLock &&other) {
+    sys_flock(sys_flock &&other) {
       std::swap(_fd, other._fd);
       _file_path = std::move(other._file_path);
     }
 
-    ~SysFileLock() {
+    ~sys_flock() {
       if (_fd != -1) {
         int close_st = close(_fd);
         if (close_st == -1) _throw_sys_error(errno);
       }
     }
   };
-  static_assert(SharedMutex<SysFileLock>);
+  static_assert(shared_mutex<sys_flock>);
 }

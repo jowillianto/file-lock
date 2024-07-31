@@ -6,7 +6,7 @@
 #include <shared_mutex>
 import moderna.file_lock;
 
-template<moderna::file_lock::SharedMutex Mut>
+template<moderna::file_lock::shared_mutex Mut>
 void act_or_exit(const Mut& m, std::string_view act_type) {
   if (act_type == "test_shared_lockable") {
     if (m.try_lock_shared()) {
@@ -49,10 +49,10 @@ int main(int argc, char** argv) {
   std::string_view mut_type { argv[2] };
   std::string_view act_type { argv[3] };
   if (mut_type == "lf_mut") {
-    act_or_exit(moderna::file_lock::LargeFileMutex{ file_path }, act_type);
+    act_or_exit(moderna::file_lock::lf_mutex{ file_path }, act_type);
   }
   else if (mut_type == "f_mut") {
-    act_or_exit(moderna::file_lock::FileMutex{ file_path }, act_type);
+    act_or_exit(moderna::file_lock::file_mutex{ file_path }, act_type);
   }
   else throw std::bad_exception{};
 }

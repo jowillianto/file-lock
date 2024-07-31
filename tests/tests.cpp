@@ -43,10 +43,10 @@ public:
   }
 };
 
-template <file_lock::SharedMutex T>
+template <file_lock::shared_mutex T>
   requires(std::constructible_from<T, std::filesystem::path>)
 auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tmp_fd) {
-  return test_lib::Tester{test_suite}
+  return test_lib::make_tester(test_suite)
     .add_test(
       "create_no_truncate",
       [&]() {
@@ -68,8 +68,8 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
       [&]() {
         std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
         T file_mutex{file_path};
-        auto thread_sender = thread_plus::channel::Channel<void>{};
-        auto cur_sender = thread_plus::channel::Channel<void>{};
+        auto thread_sender = thread_plus::void_channel{};
+        auto cur_sender = thread_plus::void_channel{};
         // Lock File in another thread
         SafeThread thread{std::thread{[&]() mutable {
           T file_mutex{file_path};
@@ -92,8 +92,8 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
       [&]() {
         std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
         T file_mutex{file_path};
-        auto thread_sender = thread_plus::channel::Channel<void>{};
-        auto cur_sender = thread_plus::channel::Channel<void>{};
+        auto thread_sender = thread_plus::void_channel{};
+        auto cur_sender = thread_plus::void_channel{};
         // Lock File in another thread
         SafeThread thread{std::thread{[&]() mutable {
           file_mutex.lock();
@@ -115,8 +115,8 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
       [&]() {
         std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
         T file_mutex{file_path};
-        auto thread_sig = thread_plus::channel::Channel<void>{};
-        auto cur_sig = thread_plus::channel::Channel<void>{};
+        auto thread_sig = thread_plus::void_channel{};
+        auto cur_sig = thread_plus::void_channel{};
         SafeThread thread{std::thread{[&]() mutable {
           T file_mutex{file_path};
           file_mutex.try_lock_shared();
@@ -141,8 +141,8 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
       [&]() {
         std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
         T file_mutex{file_path};
-        auto thread_sig = thread_plus::channel::Channel<void>{};
-        auto cur_sig = thread_plus::channel::Channel<void>{};
+        auto thread_sig = thread_plus::void_channel{};
+        auto cur_sig = thread_plus::void_channel{};
         SafeThread thread{std::thread{[&]() mutable {
           file_mutex.try_lock_shared();
           // std::this_thread::sleep_for(std::chrono::milliseconds{300});
@@ -166,8 +166,8 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
       [&]() {
         std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
         T file_mutex{file_path};
-        auto thread_sig = thread_plus::channel::Channel<void>{};
-        auto cur_sig = thread_plus::channel::Channel<void>{};
+        auto thread_sig = thread_plus::void_channel{};
+        auto cur_sig = thread_plus::void_channel{};
         SafeThread thread{std::thread{[&]() mutable {
           T file_mutex{file_path};
           file_mutex.lock_shared();
@@ -191,8 +191,8 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
       [&]() {
         std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
         T file_mutex{file_path};
-        auto thread_sig = thread_plus::channel::Channel<void>{};
-        auto cur_sig = thread_plus::channel::Channel<void>{};
+        auto thread_sig = thread_plus::void_channel{};
+        auto cur_sig = thread_plus::void_channel{};
         SafeThread thread{std::thread{[&]() mutable {
           T file_mutex{file_path};
           file_mutex.lock_shared();
@@ -216,8 +216,8 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
       [&]() {
         std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
         T file_mutex{file_path};
-        auto thread_sig = thread_plus::channel::Channel<void>{};
-        auto cur_sig = thread_plus::channel::Channel<void>{};
+        auto thread_sig = thread_plus::void_channel{};
+        auto cur_sig = thread_plus::void_channel{};
         SafeThread thread{std::thread{[&]() mutable {
           T file_mutex{file_path};
           std::shared_lock lock{file_mutex};
@@ -238,8 +238,8 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
       [&]() {
         std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
         T file_mutex{file_path};
-        auto thread_sig = thread_plus::channel::Channel<void>{};
-        auto cur_sig = thread_plus::channel::Channel<void>{};
+        auto thread_sig = thread_plus::void_channel{};
+        auto cur_sig = thread_plus::void_channel{};
         SafeThread thread{std::thread{[&]() mutable {
           std::shared_lock lock{file_mutex};
           thread_sig.send();
@@ -259,8 +259,8 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
       [&]() {
         std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
         T file_mutex{file_path};
-        auto thread_sig = thread_plus::channel::Channel<void>{};
-        auto cur_sig = thread_plus::channel::Channel<void>{};
+        auto thread_sig = thread_plus::void_channel{};
+        auto cur_sig = thread_plus::void_channel{};
         // Lock File in another thread
         SafeThread thread{std::thread{[&]() mutable {
           T file_mutex{file_path};
@@ -282,8 +282,8 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
       [&]() {
         std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
         T file_mutex{file_path};
-        auto thread_sig = thread_plus::channel::Channel<void>{};
-        auto cur_sig = thread_plus::channel::Channel<void>{};
+        auto thread_sig = thread_plus::void_channel{};
+        auto cur_sig = thread_plus::void_channel{};
         // Lock File in another thread
         SafeThread thread{std::thread{[&]() mutable {
           std::unique_lock lock{file_mutex};
@@ -305,17 +305,16 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
         std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
         T file_mutex{file_path};
         std::unique_lock lock{file_mutex};
-        process::Process process{process::StaticArgument{
+        auto completed_process = subprocess::run(process::static_argument{
           TEST_CHILD,
           file_path.string(),
           []() {
-            if (std::same_as<T, file_lock::FileMutex>) return "f_mut";
+            if (std::same_as<T, file_lock::file_mutex>) return "f_mut";
             else
               return "lf_mut";
           }(),
           "test_not_unique_lockable"
-        }};
-        auto completed_process = process.wait();
+        });
         test_lib::assert_equal(completed_process.value().exit_code(), 0);
       }
     )
@@ -325,17 +324,16 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
         std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
         T file_mutex{file_path};
         std::shared_lock lock{file_mutex};
-        process::Process process{process::StaticArgument{
+        auto completed_process = subprocess::run(process::static_argument{
           TEST_CHILD,
           file_path.string(),
           []() {
-            if (std::same_as<T, file_lock::FileMutex>) return "f_mut";
+            if (std::same_as<T, file_lock::file_mutex>) return "f_mut";
             else
               return "lf_mut";
           }(),
           "test_shared_lockable"
-        }};
-        auto completed_process = process.wait();
+        });
         test_lib::assert_equal(completed_process.value().exit_code(), 0);
       }
     )
@@ -345,28 +343,26 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
         std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
         T file_mutex{file_path};
         std::unique_lock lock{file_mutex};
-        process::Process process_unique{process::StaticArgument{
+        auto completed_process_unique = subprocess::run(process::static_argument{
           TEST_CHILD,
           file_path.string(),
           []() {
-            if (std::same_as<T, file_lock::FileMutex>) return "f_mut";
+            if (std::same_as<T, file_lock::file_mutex>) return "f_mut";
             else
               return "lf_mut";
           }(),
           "test_not_unique_lockable"
-        }};
-        process::Process process_shared{process::StaticArgument{
+        });
+        auto completed_process_shared = subprocess::run(process::static_argument{
           TEST_CHILD,
           file_path.string(),
           []() {
-            if (std::same_as<T, file_lock::FileMutex>) return "f_mut";
+            if (std::same_as<T, file_lock::file_mutex>) return "f_mut";
             else
               return "lf_mut";
           }(),
           "test_not_shared_lockable"
-        }};
-        auto completed_process_unique = process_unique.wait();
-        auto completed_process_shared = process_shared.wait();
+        });
         test_lib::assert_equal(completed_process_unique.value().exit_code(), 0);
         test_lib::assert_equal(completed_process_shared.value().exit_code(), 0);
       }
@@ -376,9 +372,9 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
       [&]() {
         std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
         T file_mutex{file_path};
-        auto unlock_sig = thread_plus::channel::Channel<void>{};
-        auto unlock_done_sig = thread_plus::channel::Channel<void>{};
-        auto exit_sig = thread_plus::channel::Channel<void>{};
+        auto unlock_sig = thread_plus::void_channel{};
+        auto unlock_done_sig = thread_plus::void_channel{};
+        auto exit_sig = thread_plus::void_channel{};
         SafeThread t1{[&]() {
           std::shared_lock l1{file_mutex};
           auto _ = unlock_sig.recv();
@@ -393,17 +389,16 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
           auto _ = exit_sig.recv();
         }};
         auto _ = unlock_done_sig.recv();
-        process::Process process{process::StaticArgument{
+        auto completed_process = subprocess::run(process::static_argument{
           TEST_CHILD,
           file_path.string(),
           []() {
-            if (std::same_as<T, file_lock::FileMutex>) return "f_mut";
+            if (std::same_as<T, file_lock::file_mutex>) return "f_mut";
             else
               return "lf_mut";
           }(),
           "test_not_unique_lockable"
-        }};
-        auto completed_process = process.wait();
+        });
         exit_sig.send(2);
         test_lib::assert_equal(completed_process.value().exit_code(), 0);
       }
@@ -416,25 +411,24 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
       std::shared_lock lock2{file_mutex2};
       lock.unlock();
       lock.release();
-      process::Process process{process::StaticArgument{
+      auto completed_process = subprocess::run(process::static_argument{
         TEST_CHILD,
         file_path.string(),
         []() {
-          if (std::same_as<T, file_lock::FileMutex>) return "f_mut";
+          if (std::same_as<T, file_lock::file_mutex>) return "f_mut";
           else
             return "lf_mut";
         }(),
         "test_not_unique_lockable"
-      }};
-      auto completed_process = process.wait();
+      });
       test_lib::assert_equal(completed_process.value().exit_code(), 0);
     });
 }
 
-template <file_lock::SharedMutex T>
+template <file_lock::shared_mutex T>
   requires(std::constructible_from<T, std::filesystem::path>)
 auto fuzzer_tester(const std::string &test_suite, const std::filesystem::path &tmp_fd) {
-  return test_lib::Tester{test_suite}.add_test("fuzz_test", [&]() {
+  return test_lib::make_tester(test_suite).add_test("fuzz_test", [&]() {
     std::filesystem::path file_path = tmp_fd / test_lib::random_string(10);
     std::string random_value = test_lib::random_string(1500);
     std::fstream file{file_path, std::ios_base::out | std::ios_base::trunc};
@@ -522,12 +516,12 @@ auto fuzzer_tester(const std::string &test_suite, const std::filesystem::path &t
   });
 }
 
-template <file_lock::SharedMutex T>
+template <file_lock::shared_mutex T>
   requires(std::constructible_from<T, std::filesystem::path>)
 auto undefined_behaviour_tester(
   const std::string &test_suite, const std::filesystem::path &tmp_fd
 ) {
-  return test_lib::Tester{test_suite}
+  return test_lib::make_tester(test_suite)
     .add_test(
       "unlock_without_lock",
       [&]() {
@@ -552,11 +546,11 @@ auto undefined_behaviour_tester(
 }
 
 auto mutex_store_tester =
-  test_lib::Tester{"mutex_store_tester"}
+  test_lib::make_tester("mutex_store_tester")
     .add_test(
       "test_rw",
       []() {
-        auto store = file_lock::MutexStore{10};
+        auto store = file_lock::mutex_store{10};
         auto fpath = std::filesystem::path{test_lib::random_string(10)};
         auto mutex = store.get_mutex(fpath);
         auto mutex_2 = store.get_mutex(fpath);
@@ -568,7 +562,7 @@ auto mutex_store_tester =
     .add_test(
       "test_fuzz",
       []() {
-        auto store = file_lock::MutexStore{10};
+        auto store = file_lock::mutex_store{10};
         auto thread_count = test_lib::random_integer(20, 30);
         auto path_count = test_lib::random_integer(20, 100);
         auto per_thread_task = test_lib::random_integer(10, 20);
@@ -602,7 +596,7 @@ auto mutex_store_tester =
       }
     )
     .add_test("test_gc", []() {
-      auto store = file_lock::MutexStore{10};
+      auto store = file_lock::mutex_store{10};
       for (size_t i = 0; i < 11; i += 1)
         store.get_mutex(std::filesystem::path{test_lib::random_string(10)});
       // There will be one reference left.
@@ -617,16 +611,16 @@ auto mutex_store_tester =
     });
 
 int main(int argc, char **argv, const char **envp) {
-  process::Env::init_global(envp);
+  process::env::init_global(envp);
   const std::filesystem::path tmp_fd{"tmp"};
   DirGuard dir_guard{tmp_fd};
   // mutex_tester<file_lock::FcntlMutex>("basic::FcntlMutex", tmp_fd).print_or_exit();
-  mutex_tester<file_lock::FileMutex>("basic::BasicMutex", tmp_fd).print_or_exit();
-  mutex_tester<file_lock::LargeFileMutex>("basic::LargeFileMutex", tmp_fd).print_or_exit();
-  fuzzer_tester<file_lock::FileMutex>("fuzzer::BasicMutex", tmp_fd).print_or_exit();
-  fuzzer_tester<file_lock::LargeFileMutex>("fuzzer::LargeFileMutex", tmp_fd).print_or_exit();
-  undefined_behaviour_tester<file_lock::FileMutex>("undefined::BasicMutex", tmp_fd).print_or_exit();
-  undefined_behaviour_tester<file_lock::LargeFileMutex>("undefined::LargeFileMutex", tmp_fd)
+  mutex_tester<file_lock::file_mutex>("basic::file_mutex", tmp_fd).print_or_exit();
+  mutex_tester<file_lock::lf_mutex>("basic::lf_mutex", tmp_fd).print_or_exit();
+  fuzzer_tester<file_lock::file_mutex>("fuzzer::file_mutex", tmp_fd).print_or_exit();
+  fuzzer_tester<file_lock::lf_mutex>("fuzzer::lf_mutex", tmp_fd).print_or_exit();
+  undefined_behaviour_tester<file_lock::file_mutex>("undefined::file_mutex", tmp_fd).print_or_exit();
+  undefined_behaviour_tester<file_lock::lf_mutex>("undefined::lf_mutex", tmp_fd)
     .print_or_exit();
   mutex_store_tester.print_or_exit();
 }

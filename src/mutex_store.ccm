@@ -11,13 +11,13 @@ import :shared_mutex;
 
 namespace moderna::file_lock {
   /*
-    MutexStore stores the shared mutexes used for FileMutex. This allows multiple
+    mutex_store stores the shared mutexes used for FileMutex. This allows multiple
     threads to access the same shared_mutex given the same ABSOLUTE file path.
     @param record_size : denotes the maximum size of the record. When the store
     size exceeds this size, the store will start pruning old locks.
   */
-  export struct MutexStore {
-    MutexStore(size_t record_size = 5000) :
+  export struct mutex_store {
+    mutex_store(size_t record_size = 5000) :
       _record_size{record_size}{}
     /*
       Get a mutex for the given path, insert a mutex if required, the path will be

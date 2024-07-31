@@ -9,24 +9,24 @@ module;
 #include <unistd.h>
 export module moderna.file_lock:basic_mutex;
 import :shared_mutex;
-import :sys_file_lock;
+import :sys_flock;
 import :mutex_store;
 
 namespace moderna::file_lock {
-  static MutexStore mutex_store;
-  export class FileMutex {
+  static mutex_store global_store;
+  export class file_mutex {
   private:
-    SysFileLock _file_lock;
+    sys_flock _file_lock;
     std::shared_ptr<std::shared_mutex> _mutex;
 
   public:
     /*
-      Construct a FileMutex, note that however, it is possible to provide a mutex store but this is 
+      Construct a file_mutex, note that however, it is possible to provide a mutex store but this is 
       not recommended unless specific capacity settings are going to be changed.
     */
-    FileMutex(
+    file_mutex(
       const std::filesystem::path &file_path, 
-      MutexStore& store = mutex_store
+      mutex_store& store = global_store
     ) :
       _file_lock{file_path}, _mutex{store.get_mutex(file_path)} {}
 
@@ -72,5 +72,5 @@ namespace moderna::file_lock {
       return true;
     }
   };
-  static_assert(SharedMutex<FileMutex>);
+  static_assert(shared_mutex<file_mutex>);
 };
