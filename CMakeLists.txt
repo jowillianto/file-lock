@@ -44,7 +44,7 @@ endif()
 # TEST TARGET
 if(
   EXISTS ${CMAKE_CURRENT_LIST_DIR}/../test-lib/CMakeLists.txt 
-  AND EXISTS ${CMAKE_CURRENT_LIST_DIR}/../thread_plus/CMakeLists.txt
+  AND EXISTS ${CMAKE_CURRENT_LIST_DIR}/../thread-plus/CMakeLists.txt
   AND EXISTS ${CMAKE_CURRENT_LIST_DIR}/../process/CMakeLists.txt
   AND PROJECT_IS_TOP_LEVEL
 )
