@@ -1,0 +1,79 @@
+module;
+#include <sys/file.h>
+#include <cerrno>
+#include <cstdio>
+#include <expected>
+#include <filesystem>
+#include <unistd.h>
+export module moderna.file_lock:sys_call;
+import :error;
+namespace moderna::file_lock {
+  export struct cross_platform_adapter {
+    using file_t = int;
+    using error_t = file_lock_error<int>;
+    static int invalid_fd;
+    static std::expected<file_t, int> open_for_lock(const std::filesystem::path &path) noexcept {
+      file_t fd = open(path.c_str(), O_RDWR | O_CREAT | O_APPEND, S_IRWXU);
+      if (fd == -1) {
+        return std::unexpected{errno};
+      }
+      return fd;
+    }
+    static std::expected<void, int> close_file(file_t file) noexcept {
+      int code = close(file);
+      if (code == -1) return std::unexpected{errno};
+      return {};
+    }
+    static std::expected<void, int> lock_unique(file_t file) noexcept {
+      int code = flock(file, LOCK_EX);
+      if (code == 0) {
+        return {};
+      }
+      return std::unexpected{errno};
+    }
+    static std::expected<void, int> lock_shared(file_t file) noexcept {
+      int code = flock(file, LOCK_SH);
+      if (code == 0) {
+        return {};
+      }
+      return std::unexpected{errno};
+    }
+    static std::expected<bool, int> try_lock_unique(file_t file) noexcept {
+      int code = flock(file, LOCK_EX | LOCK_NB);
+      if (code == 0) {
+        return true;
+      }
+      int err_code = errno;
+      if (err_code == EWOULDBLOCK) {
+        return false;
+      }
+      return std::unexpected{err_code};
+    }
+    static std::expected<bool, int> try_lock_shared(file_t file) noexcept {
+      int code = flock(file, LOCK_SH | LOCK_NB);
+      if (code == 0) {
+        return true;
+      }
+      int err_code = errno;
+      if (err_code == EWOULDBLOCK) {
+        return false;
+      }
+      return std::unexpected{err_code};
+    }
+    static std::expected<void, int> unlock(file_t file) noexcept {
+      int code = flock(file, LOCK_UN);
+      if (code == 0) {
+        return {};
+      }
+      int err_code = errno;
+      /*
+        The file is unlocked basically hence unlock does the job.
+      */
+      if (err_code == EINVAL) {
+        return {};
+      }
+      return std::unexpected{errno};
+    }
+  };
+  int cross_platform_adapter::invalid_fd = -1;
+}

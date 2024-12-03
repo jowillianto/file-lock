@@ -1,44 +1,105 @@
 module;
+#include <expected>
 #include <filesystem>
-#include <unistd.h>
 export module moderna.file_lock:large_file_mutex;
-import :shared_mutex;
-import :sys_flock;
-import :basic_mutex;
+import :file_mutex;
 
 namespace moderna::file_lock {
-  export class lf_mutex {
-  private:
-    std::filesystem::path _file_path;
-    std::filesystem::path _lock_file_path;
-    file_mutex _file_lock;
-
-  public:
-    lf_mutex(const std::filesystem::path &file_path) :
-      _file_path(file_path),
-      _lock_file_path(file_path.parent_path() / (file_path.filename().string() + ".sys_lock")),
-      _file_lock(_lock_file_path) {}
-
-    void lock() const {
-      _file_lock.lock();
-    }
-    void unlock() const {
-      _file_lock.unlock();
-    }
-    bool try_lock() const {
-      return _file_lock.try_lock();
-    }
-
-    void lock_shared() const {
-      _file_lock.lock_shared();
-    }
-    void unlock_shared() const {
-      _file_lock.unlock_shared();
-    }
-    bool try_lock_shared() const {
-      return _file_lock.try_lock_shared();
-    }
+  template <bool use_expected> struct __lf_mutex_data {
+    std::filesystem::path fpath;
+    __file_mutex<use_expected> mut;
   };
 
-  static_assert(shared_mutex<lf_mutex>);
+  template <bool use_expected> struct __lf_mutex {
+
+    /*
+      This implements Lockable and SharedLockable as specified by std.
+      SharedLockable : https://en.cppreference.com/w/cpp/named_req/SharedLockable
+      Lockable: https://en.cppreference.com/w/cpp/named_req/Lockable
+
+      The following functions CAN and will throw exceptions.
+    */
+    std::expected<void, int> unlock()
+      requires(use_expected)
+    {
+      return __data.mut.unlock(__data.fd);
+    }
+    void unlock()
+      requires(!use_expected)
+    {
+      return __data.mut.unlock(__data.fd).value();
+    }
+    std::expected<void, int> lock()
+      requires(use_expected)
+    {
+      return __data.mut.lock_unique(__data.fd);
+    }
+    void lock()
+      requires(!use_expected)
+    {
+      return __data.mut.lock_unique(__data.fd).value();
+    }
+
+    std::expected<bool, int> try_lock()
+      requires(use_expected)
+    {
+      return __data.mut.try_lock_unique(__data.fd);
+    }
+
+    bool try_lock()
+      requires(!use_expected)
+    {
+      return __data.mut.try_lock_unique(__data.fd).value();
+    }
+    std::expected<void, int> lock_shared()
+      requires(use_expected)
+    {
+      return __data.mut.lock_shared(__data.fd);
+    }
+    void lock_shared()
+      requires(!use_expected)
+    {
+      return __data.mut.lock_shared(__data.fd).value();
+    }
+    std::expected<bool, int> try_lock_shared()
+      requires(use_expected)
+    {
+      return __data.mut.try_lock_shared(__data.fd);
+    }
+    bool try_lock_shared()
+      requires(!use_expected)
+    {
+      return __data.mut.try_lock_shared(__data.fd).value();
+    }
+    void unlock_shared()
+      requires(!use_expected)
+    {
+      return unlock();
+    }
+    std::expected<void, int> unlock_shared()
+      requires(use_expected)
+    {
+      return unlock();
+    }
+    std::expected<__lf_mutex, int> duplicate() {
+      return create(__data.fpath);
+    }
+
+    static std::expected<__lf_mutex, int> create(
+      std::filesystem::path path, std::string_view extension = ".sys_lock"
+    ) noexcept {
+      std::filesystem::path lock_path = std::filesystem::path{path}.replace_extension(extension);
+      return __file_mutex<use_expected>::create(std::move(lock_path)).transform([&](auto &&mut) {
+        return __lf_mutex{{.fpath{std::move(path)}, .mut{std::move(mut)}}};
+      });
+    }
+
+  private:
+    __lf_mutex_data<use_expected> __data;
+
+    __lf_mutex(__lf_mutex_data<use_expected> data) : __data{std::move(data)} {}
+  };
+
+  export using lf_mutex = __file_mutex<false>;
+  export using safe_lf_mutex = __file_mutex<true>;
 };

@@ -7,10 +7,19 @@ set (CMAKE_CXX_SCAN_FOR_MODULES true)
 find_package(Python3 3.7 REQUIRED COMPONENTS Interpreter Development)
 
 add_library(${PROJECT_NAME})
-file (
-  GLOB ${PROJECT_NAME}_src
-  "${CMAKE_CURRENT_LIST_DIR}/src/*.ccm"
-)
+if (UNIX)
+  file (
+    GLOB ${PROJECT_NAME}_src
+    "${CMAKE_CURRENT_LIST_DIR}/src/*.ccm"
+    "${CMAKE_CURRENT_LIST_DIR}/src/unix/*.ccm"
+  )
+elseif (WIN32)
+  file (
+    GLOB ${PROJECT_NAME}_src
+    "${CMAKE_CURRENT_LIST_DIR}/src/*.ccm"
+    "${CMAKE_CURRENT_LIST_DIR}/src/win32/*.ccm"
+  )
+endif()
 
 target_sources(${PROJECT_NAME}
   PUBLIC
@@ -62,7 +71,7 @@ if(
       moderna_thread_plus 
       moderna_process
     COMPILE_DEFINITIONS 
-      "TEST_CHILD=\"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test_child\""
+      TEST_CHILD="$<TARGET_FILE:test_child>"
   )
   add_executable(test_child ${CMAKE_CURRENT_LIST_DIR}/tests/test_child.cpp)
   target_link_libraries(test_child ${PROJECT_NAME})
