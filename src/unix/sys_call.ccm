@@ -1,45 +1,50 @@
 module;
 #include <sys/file.h>
 #include <cerrno>
-#include <cstdio>
+#include <cstring>
 #include <expected>
 #include <filesystem>
+#include <stdexcept>
+#include <system_error>
 #include <unistd.h>
 export module moderna.file_lock:sys_call;
-import :error;
+import :unique_fd;
 namespace moderna::file_lock {
+  namespace fs = std::filesystem;
+  static auto file_closer = [](int fd) { close(fd); };
   export struct cross_platform_adapter {
-    using file_t = int;
-    using error_t = file_lock_error<int>;
+    using file_t = unique_fd<int, -1, decltype(file_closer)>;
     static int invalid_fd;
-    static std::expected<file_t, int> open_for_lock(const std::filesystem::path &path) noexcept {
-      file_t fd = open(path.c_str(), O_RDWR | O_CREAT | O_APPEND, S_IRWXU);
+    static std::expected<file_t, fs::filesystem_error> open_for_lock(
+      const std::filesystem::path &path
+    ) {
+      int fd = open(path.c_str(), O_RDWR | O_CREAT | O_APPEND, S_IRWXU);
       if (fd == -1) {
-        return std::unexpected{errno};
+        int error_code = errno;
+        return std::unexpected{fs::filesystem_error{
+          strerror(error_code), std::error_code{error_code, std::system_category()}
+        }};
       }
-      return fd;
+      return file_t{fd, file_closer};
     }
-    static std::expected<void, int> close_file(file_t file) noexcept {
-      int code = close(file);
-      if (code == -1) return std::unexpected{errno};
+    static std::expected<void, std::runtime_error> lock_unique(const file_t &file) {
+      int code = flock(file.get(), LOCK_EX);
+      if (code == -1) {
+        int error_code = errno;
+        return std::unexpected{std::runtime_error{strerror(error_code)}};
+      }
       return {};
     }
-    static std::expected<void, int> lock_unique(file_t file) noexcept {
-      int code = flock(file, LOCK_EX);
-      if (code == 0) {
-        return {};
+    static std::expected<void, std::runtime_error> lock_shared(const file_t &file) {
+      int code = flock(file.get(), LOCK_SH);
+      if (code == -1) {
+        int error_code = errno;
+        return std::unexpected{std::runtime_error{strerror(error_code)}};
       }
-      return std::unexpected{errno};
+      return {};
     }
-    static std::expected<void, int> lock_shared(file_t file) noexcept {
-      int code = flock(file, LOCK_SH);
-      if (code == 0) {
-        return {};
-      }
-      return std::unexpected{errno};
-    }
-    static std::expected<bool, int> try_lock_unique(file_t file) noexcept {
-      int code = flock(file, LOCK_EX | LOCK_NB);
+    static std::expected<bool, std::runtime_error> try_lock_unique(const file_t &file) {
+      int code = flock(file.get(), LOCK_EX | LOCK_NB);
       if (code == 0) {
         return true;
       }
@@ -47,10 +52,10 @@ namespace moderna::file_lock {
       if (err_code == EWOULDBLOCK) {
         return false;
       }
-      return std::unexpected{err_code};
+      return std::unexpected{std::runtime_error{strerror(err_code)}};
     }
-    static std::expected<bool, int> try_lock_shared(file_t file) noexcept {
-      int code = flock(file, LOCK_SH | LOCK_NB);
+    static std::expected<bool, std::runtime_error> try_lock_shared(const file_t &file) {
+      int code = flock(file.get(), LOCK_SH | LOCK_NB);
       if (code == 0) {
         return true;
       }
@@ -58,10 +63,10 @@ namespace moderna::file_lock {
       if (err_code == EWOULDBLOCK) {
         return false;
       }
-      return std::unexpected{err_code};
+      return std::unexpected{std::runtime_error{strerror(err_code)}};
     }
-    static std::expected<void, int> unlock(file_t file) noexcept {
-      int code = flock(file, LOCK_UN);
+    static std::expected<void, std::runtime_error> unlock(const file_t &file) {
+      int code = flock(file.get(), LOCK_UN);
       if (code == 0) {
         return {};
       }
@@ -72,7 +77,7 @@ namespace moderna::file_lock {
       if (err_code == EINVAL) {
         return {};
       }
-      return std::unexpected{errno};
+      return std::unexpected{std::runtime_error{strerror(err_code)}};
     }
   };
   int cross_platform_adapter::invalid_fd = -1;

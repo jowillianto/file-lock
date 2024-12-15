@@ -1,3 +1,4 @@
+#include <sys/wait.h>
 #include <chrono>
 #include <exception>
 #include <filesystem>
@@ -186,9 +187,9 @@ auto mutex_tester(const std::string &test_suite, const std::filesystem::path &tm
       }
     )
     /*
-      This test ensures that the following works : 
-      - T2 obtains a read lock on the file 
-      - T1 cannot obtain a write lock on the file. 
+      This test ensures that the following works :
+      - T2 obtains a read lock on the file
+      - T1 cannot obtain a write lock on the file.
     */
     .add_test(
       "no_concurrent_write_and_read_same_object",
@@ -451,35 +452,22 @@ auto fuzzer_tester(const std::string &test_suite, const std::filesystem::path &t
       else
         fork_count += 1;
     }
-    std::vector<pid_t> pid_list;
-    pid_list.reserve(fork_count);
+    std::vector<subprocess> process_list;
+    process_list.reserve(fork_count);
     for (uint32_t i = 0; i < fork_count; i += 1) {
-      pid_t child_pid = fork();
-      if (child_pid == -1) throw std::system_error{std::error_code{errno, std::generic_category()}};
-      else if (child_pid == 0) {
-        uint32_t todo = test_lib::random_integer(0, 1);
-        auto file_mutex = T::create(file_path).value();
-        std::this_thread::sleep_for(std::chrono::microseconds{test_lib::random_integer(0, 500)});
-        if (todo == 0) {
-          std::shared_lock lock{file_mutex};
-          std::ifstream f{file_path};
-          std::stringstream buffer;
-          buffer << f.rdbuf();
-          if (buffer.str() != random_value) {
-            std::cout << random_value << " is not equal to " << buffer.str() << std::endl;
-            exit(1);
-          }
-        } else {
-          std::unique_lock lock{file_mutex};
-          std::ofstream f{file_path, std::ios_base::trunc | std::ios_base::out};
-          f << random_value;
-          f.flush();
-          f.close();
-        }
-        exit(0);
-      } else {
-        pid_list.push_back(child_pid);
-      }
+      process_list.emplace_back(subprocess::spawn(process::static_argument{
+                                                    TEST_CHILD,
+                                                    file_path.string(),
+                                                    []() {
+                                                      if (std::same_as<T, file_lock::file_mutex>)
+                                                        return "f_mut";
+                                                      else
+                                                        return "lf_mut";
+                                                    }(),
+                                                    "fuzz_test",
+                                                    random_value
+                                                  })
+                                  .value());
     }
     std::vector<std::thread> thread_list;
     thread_list.reserve(thread_count);
@@ -506,13 +494,8 @@ auto fuzzer_tester(const std::string &test_suite, const std::filesystem::path &t
     }
     for (auto &thread : thread_list)
       thread.join();
-    for (auto pid : pid_list) {
-      int status = 0;
-      if (waitpid(pid, &status, 0) == -1)
-        throw std::system_error{std::error_code{errno, std::generic_category()}};
-      if ((WIFEXITED(status) && WEXITSTATUS(status) == 1) || !WIFEXITED(status)) {
-        throw std::bad_exception{};
-      }
+    for (auto &process : process_list) {
+      process.wait().transform_error([](auto &&e) -> bool { throw e; }).value();
     }
   });
 }
@@ -543,72 +526,6 @@ auto undefined_behaviour_tester(
       auto lock_dup = T::create(fpath).value();
     });
 }
-
-// auto mutex_store_tester =
-//   test_lib::make_tester("mutex_store_tester")
-//     .add_test(
-//       "test_rw",
-//       []() {
-//         auto store = file_lock::mutex_store{10};
-//         auto fpath = std::filesystem::path{test_lib::random_string(10)};
-//         auto mutex = store.get_mutex(fpath);
-//         auto mutex_2 = store.get_mutex(fpath);
-//         test_lib::assert_equal(
-//           static_cast<void *>(mutex.get()), static_cast<void *>(mutex_2.get())
-//         );
-//       }
-//     )
-//     .add_test(
-//       "test_fuzz",
-//       []() {
-//         auto store = file_lock::mutex_store{10};
-//         auto thread_count = test_lib::random_integer(20, 30);
-//         auto path_count = test_lib::random_integer(20, 100);
-//         auto per_thread_task = test_lib::random_integer(10, 20);
-//         std::vector<std::thread> workers;
-//         workers.reserve(thread_count);
-//         std::vector<std::filesystem::path> paths;
-//         paths.reserve(path_count);
-//         for (size_t i = 0; i < path_count; i += 1)
-//           paths.emplace_back(std::filesystem::path{test_lib::random_string(10)});
-//         for (size_t i = 0; i < thread_count; i += 1)
-//           workers.emplace_back(std::thread{[&]() {
-//             // This ensure that the reference for mutexes are not gone. This will test the
-//             garbage
-//             // collection.
-//             std::vector<std::shared_ptr<std::shared_mutex>> mutexes;
-//             mutexes.reserve(per_thread_task);
-//             for (size_t i = 0; i < per_thread_task; i += 1) {
-//               std::this_thread::sleep_for(
-//                 std::chrono::microseconds(test_lib::random_integer(50, 100))
-//               );
-//               int path_id = test_lib::random_integer(0, path_count - 1);
-//               std::filesystem::path &fpath = paths.at(path_id);
-//               // Randomly choose between saving or throwing away the mutex
-//               auto mutex = store.get_mutex(fpath);
-//               if (test_lib::random_real(0.0, 1.0) < 0.5) {
-//                 mutexes.emplace_back(std::move(mutex));
-//               }
-//             }
-//           }});
-//         for (auto &worker : workers)
-//           worker.join();
-//       }
-//     )
-//     .add_test("test_gc", []() {
-//       auto store = file_lock::mutex_store{10};
-//       for (size_t i = 0; i < 11; i += 1)
-//         store.get_mutex(std::filesystem::path{test_lib::random_string(10)});
-//       // There will be one reference left.
-//       /*
-//         store size reaches 10.
-//         write_new()
-//         create_shared_for_current_path
-//         garbage_collect prunes all old paths.
-//         size is 1.
-//       */
-//       test_lib::assert_equal(store.size(), 1);
-//     });
 
 int main(int argc, char **argv, const char **envp) {
   process::env::init_global(envp);

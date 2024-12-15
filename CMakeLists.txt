@@ -74,7 +74,7 @@ if(
       TEST_CHILD="$<TARGET_FILE:test_child>"
   )
   add_executable(test_child ${CMAKE_CURRENT_LIST_DIR}/tests/test_child.cpp)
-  target_link_libraries(test_child ${PROJECT_NAME})
+  target_link_libraries(test_child ${PROJECT_NAME} moderna_test_lib)
 elseif (PROJECT_IS_TOP_LEVEL)
   message("Test with moderna full library")
 endif()

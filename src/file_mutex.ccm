@@ -35,7 +35,7 @@ namespace moderna::file_lock {
     std::shared_mutex mut;
     ref_counter counter;
   };
-  template <bool use_expected> struct __file_mutex {
+  export struct file_mutex {
     /*
       This implements Lockable and SharedLockable as specified by std.
       SharedLockable : https://en.cppreference.com/w/cpp/named_req/SharedLockable
@@ -48,59 +48,23 @@ namespace moderna::file_lock {
       Unlocking a uniquely locked mutex is not a problem as there is only one holder. We do not even
       need to perform ref counting with this one as it will be nicely protected.
     */
-    std::expected<void, int> unlock()
-      requires(use_expected)
-    {
-      return cross_platform_adapter::unlock(__fd).transform([&]() mutable {
-        std::unique_lock{__control_block->mut, std::adopt_lock};
-      });
-    }
-    void unlock()
-      requires(!use_expected)
-    {
+    void unlock() {
       return cross_platform_adapter::unlock(__fd)
         .transform([&]() mutable {
           std::unique_lock{__control_block->mut, std::adopt_lock};
         })
+        .transform_error([](auto &&e) -> bool { throw e; })
+        .value();
+    }
+    void lock() {
+      auto l = std::unique_lock{__control_block->mut};
+      return cross_platform_adapter::lock_unique(__fd)
+        .transform([&]() mutable { l.release(); })
+        .transform_error([](auto &&e) -> bool { throw e; })
         .value();
     }
 
-    /*
-      Locking uniquely does not need protection and can be skipped.
-    */
-    std::expected<void, int> lock()
-      requires(use_expected)
-    {
-      auto l = std::unique_lock{__control_block->mut};
-      return cross_platform_adapter::lock_unique(__fd).transform([&]() mutable { l.release(); });
-    }
-    void lock()
-      requires(!use_expected)
-    {
-      auto l = std::unique_lock{__control_block->mut};
-      return cross_platform_adapter::lock_unique(__fd).transform([&]() mutable { l.release(); }
-      ).value();
-    }
-
-    /*
-      try locking uniquely does not need protection either and can be skipped.
-    */
-    std::expected<bool, int> try_lock()
-      requires(use_expected)
-    {
-      auto l = std::unique_lock{__control_block->mut, std::try_to_lock};
-      if (!l) {
-        return false;
-      }
-      return cross_platform_adapter::try_lock_unique(__fd).transform([&](bool &&v) mutable {
-        l.release();
-        return v;
-      });
-    }
-
-    bool try_lock()
-      requires(!use_expected)
-    {
+    bool try_lock() {
       auto l = std::unique_lock{__control_block->mut, std::try_to_lock};
       if (!l) {
         return false;
@@ -110,6 +74,7 @@ namespace moderna::file_lock {
           l.release();
           return v;
         })
+        .transform_error([](auto &&e) -> bool { throw e; })
         .value();
     }
 
@@ -120,24 +85,14 @@ namespace moderna::file_lock {
       - syscall to lock_shared
       - increment counter
     */
-    std::expected<void, int> lock_shared()
-      requires(use_expected)
-    {
-      auto l = std::shared_lock{__control_block->mut};
-      return cross_platform_adapter::lock_shared(__fd).transform([&]() mutable {
-        __control_block->counter.increment();
-        l.release();
-      });
-    }
-    void lock_shared()
-      requires(!use_expected)
-    {
+    void lock_shared() {
       auto l = std::shared_lock{__control_block->mut};
       return cross_platform_adapter::lock_shared(__fd)
         .transform([&]() mutable {
           __control_block->counter.increment();
           l.release();
         })
+        .transform_error([](auto &&e) -> bool { throw e; })
         .value();
     }
     /*
@@ -147,22 +102,7 @@ namespace moderna::file_lock {
       - syscall to lock_shared
       - increment counter
     */
-    std::expected<bool, int> try_lock_shared()
-      requires(use_expected)
-    {
-      auto l = std::shared_lock{__control_block->mut, std::try_to_lock};
-      if (!l) {
-        return false;
-      }
-      return cross_platform_adapter::try_lock_shared(__fd).transform([&](bool &&v) mutable {
-        __control_block->counter.increment();
-        l.release();
-        return v;
-      });
-    }
-    bool try_lock_shared()
-      requires(!use_expected)
-    {
+    bool try_lock_shared() {
       auto l = std::shared_lock{__control_block->mut, std::try_to_lock};
       if (!l) {
         return false;
@@ -173,98 +113,64 @@ namespace moderna::file_lock {
           l.release();
           return v;
         })
+        .transform_error([](auto &&e) -> bool { throw e; })
         .value();
     }
 
     /*
       lock_shared needs to be protected since calls to the system call could possibly convert the
       lock type. Hence :
-      - decrement counter 
+      - decrement counter
       - perform system call if required
-      - open the shared_lock on the current thread. 
-      
-      Since file_mutex is based on the file descriptor and not thread based. Hence, the following
-      precautions are required : 
-      When acquiring the shared_lock : 
-      - acquire the shared_mutex first. 
-      - acquire the file lock. (if the file lock is previously held by the current process, this is ok)
-      - increment the counter
-      When releasing : 
-      - decrement counter, 
-      - release the file lock if required (since one descriptor can only have one lock)
-      - release the mutex. 
+      - open the shared_lock on the current thread.
 
-      The precautions are to ensure thread safety. 
+      Since file_mutex is based on the file descriptor and not thread based. Hence, the following
+      precautions are required :
+      When acquiring the shared_lock :
+      - acquire the shared_mutex first.
+      - acquire the file lock. (if the file lock is previously held by the current process, this is
+      ok)
+      - increment the counter
+      When releasing :
+      - decrement counter,
+      - release the file lock if required (since one descriptor can only have one lock)
+      - release the mutex.
+
+      The precautions are to ensure thread safety.
     */
-    std::expected<void, int> unlock_shared()
-      requires(use_expected)
-    {
-      return __control_block->counter
+    void unlock_shared() {
+      __control_block->counter
         .decrement([&]() {
           return cross_platform_adapter::unlock(__fd).transform([&]() {
             std::shared_lock{__control_block->mut, std::adopt_lock};
           });
         })
-        .value_or(std::expected<void, int>({}));
-    }
-    void unlock_shared()
-      requires(!use_expected)
-    {
-      return __control_block->counter
-        .decrement([&]() {
-          return cross_platform_adapter::unlock(__fd).transform([&]() {
-            std::shared_lock{__control_block->mut, std::adopt_lock};
-          });
-        })
-        .value_or(std::expected<void, int>({}))
-        .value();
+        .transform([](auto &&v) { return v.transform_error([](auto &&e) -> bool { throw e; }); });
     }
     /*
       Creates a duplicate copy of the current file mutex without preserving its lock status.
     */
-    std::expected<__file_mutex, int> duplicate() {
+    std::expected<file_mutex, std::filesystem::filesystem_error> clone() {
       return create(__path);
     }
 
-    ~__file_mutex()
-      requires(!use_expected)
-    {
-      if (__fd != cross_platform_adapter::invalid_fd) {
-        cross_platform_adapter::close_file(__fd).value();
-      }
-    }
+    file_mutex &operator=(file_mutex &&) = default;
+    file_mutex(file_mutex &&o) = default;
 
-    __file_mutex &operator=(const __file_mutex &) = delete;
-    __file_mutex(const __file_mutex &) = delete;
-    __file_mutex &operator=(__file_mutex &&o) {
-      __path = std::move(o.__path);
-      __control_block = std::move(o.__control_block);
-      __fd = o.__fd;
-      o.__fd = -1;
-      return *this;
-    }
-    __file_mutex(__file_mutex &&o) :
-      __path{std::move(o.__path)}, __control_block{std::move(o.__control_block)}, __fd{o.__fd} {
-      o.__fd = -1;
-    }
-
-    static std::expected<__file_mutex, int> create(std::filesystem::path path) noexcept {
-      return cross_platform_adapter::open_for_lock(path).transform(
-        [&](cross_platform_adapter::file_t fd) {
-          return __file_mutex{std::move(path), fd};
-        }
-      );
+    static std::expected<file_mutex, std::filesystem::filesystem_error> create(
+      std::filesystem::path path
+    ) {
+      return cross_platform_adapter::open_for_lock(path).transform([&](auto &&fd) {
+        return file_mutex{std::move(path), std::move(fd)};
+      });
     }
 
   private:
     cross_platform_adapter::file_t __fd;
     std::filesystem::path __path;
     std::unique_ptr<atomic_control_block> __control_block;
-    __file_mutex(std::filesystem::path path, cross_platform_adapter::file_t fd) :
-      __path{std::move(path)}, __fd{fd}, __control_block{std::make_unique<atomic_control_block>()} {
-    }
+    file_mutex(std::filesystem::path path, cross_platform_adapter::file_t fd) :
+      __path{std::move(path)}, __fd{std::move(fd)},
+      __control_block{std::make_unique<atomic_control_block>()} {}
   };
-
-  export using file_mutex = __file_mutex<false>;
-  export using safe_file_mutex = __file_mutex<true>;
 };

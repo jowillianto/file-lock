@@ -1,0 +1,33 @@
+module;
+#include <concepts>
+export module moderna.file_lock:unique_fd;
+
+namespace moderna::file_lock {
+  template <typename fd_t, fd_t invalid_val, std::invocable<fd_t> destructor_t> struct unique_fd {
+    unique_fd(fd_t fd, destructor_t f) : __fd{fd}, __destructor{f} {}
+    unique_fd &operator=(unique_fd &&o) {
+      __fd = o.__fd;
+      __destructor = o.__destructor;
+      o.__fd = invalid_val;
+      return *this;
+    }
+    unique_fd(unique_fd &&o) : __fd{o.__fd}, __destructor{o.__destructor} {
+      o.__fd = invalid_val;
+    }
+    const fd_t &get() const {
+      return __fd;
+    }
+    unique_fd &operator=(const unique_fd &) = delete;
+    unique_fd(const unique_fd &) = delete;
+
+    ~unique_fd() {
+      if (__fd != invalid_val) {
+        __destructor(__fd);
+      }
+    }
+
+  private:
+    destructor_t __destructor;
+    fd_t __fd;
+  };
+}
