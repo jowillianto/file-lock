@@ -27,8 +27,8 @@ target_sources(${PROJECT_NAME}
 )
 
 # PYTHON TARGET
-if (EXISTS ${CMAKE_CURRENT_LIST_DIR}/lib/pybind11/CMakeLists.txt)
-  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/pybind11 EXCLUDE_FROM_ALL)
+if (EXISTS ${CMAKE_CURRENT_LIST_DIR}/libs/pybind11/CMakeLists.txt)
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/pybind11 EXCLUDE_FROM_ALL)
   add_library(${PROJECT_NAME}_python SHARED EXCLUDE_FROM_ALL)
   target_sources(${PROJECT_NAME}_python
     PUBLIC
