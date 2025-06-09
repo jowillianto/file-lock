@@ -4,7 +4,13 @@ set (CMAKE_CXX_STANDARD 23)
 set (CMAKE_CXX_STANDARD_REQUIRED true)
 set (CMAKE_CXX_SCAN_FOR_MODULES true)
 
-find_package(Python3 3.7 REQUIRED COMPONENTS Interpreter Development)
+option (MODERNA_FILE_LOCK_BUILD_PYTHON "Builds the python bindings" OFF)
+option (MODERNA_FILE_LOCK_PYTHON_VERSION "Python Version to use" "")
+
+if (MODERNA_FILE_LOCK_BUILD_PYTHON)
+  find_package(Python3 ${MODERNA_FILE_LOCK_PYTHON_VERSION} EXACT COMPONENTS Development)
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/pybind11)
+endif()
 
 add_library(${PROJECT_NAME})
 if (UNIX)
@@ -27,27 +33,16 @@ target_sources(${PROJECT_NAME}
 )
 
 # PYTHON TARGET
-if (EXISTS ${CMAKE_CURRENT_LIST_DIR}/libs/pybind11/CMakeLists.txt)
-  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/pybind11 EXCLUDE_FROM_ALL)
-  add_library(${PROJECT_NAME}_python SHARED EXCLUDE_FROM_ALL)
-  target_sources(${PROJECT_NAME}_python
-    PUBLIC
-      ${CMAKE_CURRENT_LIST_DIR}/python_wrapper/file_lock.cpp
-    PUBLIC FILE_SET CXX_MODULES FILES ${${PROJECT_NAME}_src}
-  )
-  target_include_directories(${PROJECT_NAME}_python 
-    PUBLIC 
-      ${pybind11_INCLUDE_DIRS}
-      ${Python_INCLUDE_DIRS}
-  )
+if (MODERNA_FILE_LOCK_BUILD_PYTHON)
+  pybind11_add_module(${PROJECT_NAME}_python ${CMAKE_CURRENT_LIST_DIR}/python_wrapper/file_lock.cpp)
   target_link_libraries(${PROJECT_NAME}_python 
-      ${pybind11_LIBRARIES}
+    PUBLIC
+      ${PROJECT_NAME}
       pybind11::module
   )
   set_target_properties(${PROJECT_NAME}_python PROPERTIES PREFIX "")
   set_target_properties(${PROJECT_NAME}_python PROPERTIES OUTPUT_NAME file_lock)
   set_target_properties(${PROJECT_NAME}_python PROPERTIES SUFFIX ".so")
-  target_compile_options(${PROJECT_NAME}_python PRIVATE "-fPIC")
 endif()
 
 # TEST TARGET
