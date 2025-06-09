@@ -51,7 +51,7 @@ namespace moderna::file_lock {
     void unlock() {
       return cross_platform_adapter::unlock(__fd)
         .transform([&]() mutable {
-          std::unique_lock{__control_block->mut, std::adopt_lock};
+          auto l = std::unique_lock{__control_block->mut, std::adopt_lock};
         })
         .transform_error([](auto &&e) -> bool { throw e; })
         .value();
@@ -142,7 +142,7 @@ namespace moderna::file_lock {
       __control_block->counter
         .decrement([&]() {
           return cross_platform_adapter::unlock(__fd).transform([&]() {
-            std::shared_lock{__control_block->mut, std::adopt_lock};
+            auto l = std::shared_lock{__control_block->mut, std::adopt_lock};
           });
         })
         .transform([](auto &&v) { return v.transform_error([](auto &&e) -> bool { throw e; }); });
