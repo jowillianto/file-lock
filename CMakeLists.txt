@@ -1,11 +1,16 @@
 cmake_minimum_required(VERSION 3.28)
-project(moderna_file_lock)
+project(moderna_file_lock VERSION 1.0.0)
 set (CMAKE_CXX_STANDARD 23)
 set (CMAKE_CXX_STANDARD_REQUIRED true)
 set (CMAKE_CXX_SCAN_FOR_MODULES true)
 
 option (MODERNA_FILE_LOCK_BUILD_PYTHON "Builds the python bindings" OFF)
-option (MODERNA_FILE_LOCK_PYTHON_VERSION "Python Version to use" "")
+option (MODERNA_FILE_LOCK_BUILD_TESTS "Build Tests" OFF)
+
+if (NOT DEFINED MODERNA_FILE_LOCK_PYTHON_VERSION)
+  set (MODERNA_FILE_LOCK_PYTHON_VERSION "Python Version to use" "")
+endif()
+set (MODERNA_COMPONENT_NAME "file_lock")
 
 if (MODERNA_FILE_LOCK_BUILD_PYTHON)
   find_package(Python3 ${MODERNA_FILE_LOCK_PYTHON_VERSION} EXACT COMPONENTS Development)
@@ -13,6 +18,7 @@ if (MODERNA_FILE_LOCK_BUILD_PYTHON)
 endif()
 
 add_library(${PROJECT_NAME})
+add_library(moderna::file_lock ALIAS ${PROJECT_NAME})
 if (UNIX)
   file (
     GLOB ${PROJECT_NAME}_src
@@ -31,6 +37,7 @@ target_sources(${PROJECT_NAME}
   PUBLIC
     FILE_SET CXX_MODULES FILES ${${PROJECT_NAME}_src}
 )
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
 
 # PYTHON TARGET
 if (MODERNA_FILE_LOCK_BUILD_PYTHON)
@@ -46,12 +53,7 @@ if (MODERNA_FILE_LOCK_BUILD_PYTHON)
 endif()
 
 # TEST TARGET
-if(
-  EXISTS ${CMAKE_CURRENT_LIST_DIR}/../test-lib/CMakeLists.txt 
-  AND EXISTS ${CMAKE_CURRENT_LIST_DIR}/../thread-plus/CMakeLists.txt
-  AND EXISTS ${CMAKE_CURRENT_LIST_DIR}/../process/CMakeLists.txt
-  AND PROJECT_IS_TOP_LEVEL
-)
+if(MODERNA_FILE_LOCK_BUILD_TESTS)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../test-lib test-lib)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../thread-plus thread-plus)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../process process)
@@ -70,6 +72,33 @@ if(
   )
   add_executable(test_child ${CMAKE_CURRENT_LIST_DIR}/tests/test_child.cpp)
   target_link_libraries(test_child ${PROJECT_NAME} moderna_test_lib)
-elseif (PROJECT_IS_TOP_LEVEL)
-  message("Test with moderna full library")
+endif()
+
+if (MODERNA_INSTALL)
+  include(GNUInstallDirs)
+  set (MODERNA_COMPONENT_NAME "file_lock")
+  set_property(
+    TARGET ${PROJECT_NAME} 
+    PROPERTY EXPORT_NAME ${MODERNA_COMPONENT_NAME}
+  )
+  install (
+    TARGETS ${PROJECT_NAME}
+    EXPORT moderna
+    FILE_SET 
+      CXX_MODULES 
+      DESTINATION ${CMAKE_INSTALL_PREFIX}/cxx_modules/moderna/${MODERNA_COMPONENT_NAME}
+      COMPONENT ${MODERNA_COMPONENT_NAME}_file_set
+    CXX_MODULES_BMI 
+      COMPONENT ${MODERNA_COMPONENT_NAME}
+      DESTINATION ${CMAKE_INSTALL_PREFIX}/cxx_modules/moderna/${MODERNA_COMPONENT_NAME}
+  )
+  if (NOT MODERNA_GLOBAL_INSTALL)
+    install (
+      EXPORT moderna
+      DESTINATION ${CMAKE_INSTALL_LIBDIR}/moderna
+      FILE moderna-config.cmake
+      NAMESPACE moderna::
+      CXX_MODULES_DIRECTORY cxx_modules/moderna
+    )
+  endif()
 endif()
