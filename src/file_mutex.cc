@@ -2,6 +2,7 @@ module;
 #include <atomic>
 #include <expected>
 #include <filesystem>
+#include <mutex>
 #include <optional>
 #include <shared_mutex>
 export module jowi.file_lock:file_mutex;
