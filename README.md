@@ -19,7 +19,7 @@ To construct a file
 #include <shared_lock>
 import file_lock;
 
-namespace mf = moderna::file_lock;
+namespace mf = jowi::file_lock;
 
 auto file_path = std::filesystem::path {R"(some path to your file)"};
 auto lock = mf::file_mutex { file_path };
