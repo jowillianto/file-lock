@@ -7,12 +7,13 @@
 #include <shared_mutex>
 #include <string_view>
 #include <thread>
-import moderna.file_lock;
-import moderna.test_lib;
+import jowi.file_lock;
+import jowi.test_lib;
 
-namespace mt = moderna::test_lib;
+namespace test_lib = jowi::test_lib;
 
-template <typename Mut> void act_or_exit(Mut &&m, std::string_view act_type) {
+template <typename mutex_type>
+void act_or_exit(mutex_type &&m, std::string_view act_type) {
   if (act_type == "test_shared_lockable") {
     if (m.try_lock_shared()) {
       m.unlock_shared();
@@ -41,9 +42,10 @@ template <typename Mut> void act_or_exit(Mut &&m, std::string_view act_type) {
     throw std::bad_exception{};
 }
 
-template <typename Mut> void fuzz_test(Mut &&m, const std::filesystem::path& file_path, std::string_view buf) {
-  uint32_t todo = mt::random_integer(0, 1);
-  std::this_thread::sleep_for(std::chrono::microseconds{mt::random_integer(0, 500)});
+template <typename mutex_type>
+void fuzz_test(mutex_type &&m, const std::filesystem::path &file_path, std::string_view buf) {
+  uint32_t todo = test_lib::random_integer(0, 1);
+  std::this_thread::sleep_for(std::chrono::microseconds{test_lib::random_integer(0, 500)});
   if (todo == 0) {
     std::shared_lock l{m};
     std::ifstream f{file_path};
@@ -76,14 +78,13 @@ int main(int argc, char **argv) {
       exit(1);
     }
     if (mut_type == "lf_mut") {
-      fuzz_test(moderna::file_lock::lf_mutex::create(file_path).value(), file_path, argv[4]);
+      fuzz_test(jowi::file_lock::lf_mutex::create(file_path).value(), file_path, argv[4]);
     } else if (mut_type == "f_mut") {
-      fuzz_test(moderna::file_lock::file_mutex::create(file_path).value(), file_path, argv[4]);
-    }
-  }
-  else if (mut_type == "lf_mut") {
-    act_or_exit(moderna::file_lock::lf_mutex::create(file_path).value(), act_type);
+      fuzz_test(jowi::file_lock::file_mutex::create(file_path).value(), file_path, argv[4]);
+    } else if (mut_type == "lf_mut") {
+    act_or_exit(jowi::file_lock::lf_mutex::create(file_path).value(), act_type);
   } else if (mut_type == "f_mut") {
-    act_or_exit(moderna::file_lock::file_mutex::create(file_path).value(), act_type);
+    act_or_exit(jowi::file_lock::file_mutex::create(file_path).value(), act_type);
   }
+}
 }

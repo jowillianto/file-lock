@@ -1,8 +1,8 @@
 module;
 #include <concepts>
-export module moderna.file_lock:unique_fd;
+export module jowi.file_lock:unique_fd;
 
-namespace moderna::file_lock {
+namespace jowi::file_lock {
   template <typename fd_t, fd_t invalid_val, std::invocable<fd_t> destructor_t> struct unique_fd {
     unique_fd(fd_t fd, destructor_t f) : __fd{fd}, __destructor{f} {}
     unique_fd &operator=(unique_fd &&o) {

@@ -7,13 +7,17 @@ module;
 #include <stdexcept>
 #include <system_error>
 #include <unistd.h>
-export module moderna.file_lock:sys_call;
+export module jowi.file_lock:sys_call;
 import :unique_fd;
-namespace moderna::file_lock {
+namespace jowi::file_lock {
   namespace fs = std::filesystem;
-  static auto file_closer = [](int fd) { close(fd); };
+  struct file_closer {
+    void operator()(int fd) {
+      close(fd);
+    }
+  };
   export struct cross_platform_adapter {
-    using file_t = unique_fd<int, -1, decltype(file_closer)>;
+    using file_t = unique_fd<int, -1, file_closer>;
     static int invalid_fd;
     static std::expected<file_t, fs::filesystem_error> open_for_lock(
       const std::filesystem::path &path
@@ -25,7 +29,7 @@ namespace moderna::file_lock {
           strerror(error_code), std::error_code{error_code, std::system_category()}
         }};
       }
-      return file_t{fd, file_closer};
+      return file_t{fd, file_closer{}};
     }
     static std::expected<void, std::runtime_error> lock_unique(const file_t &file) {
       int code = flock(file.get(), LOCK_EX);

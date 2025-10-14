@@ -1,11 +1,11 @@
 module;
 #include <expected>
 #include <filesystem>
-export module moderna.file_lock:large_file_mutex;
+export module jowi.file_lock:large_file_mutex;
 import :file_mutex;
 import :sys_call;
 
-namespace moderna::file_lock {
+namespace jowi::file_lock {
   struct lf_mutex_data {
     std::filesystem::path fpath;
     file_mutex mut;

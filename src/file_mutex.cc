@@ -2,12 +2,13 @@ module;
 #include <atomic>
 #include <expected>
 #include <filesystem>
+#include <mutex>
 #include <optional>
 #include <shared_mutex>
-export module moderna.file_lock:file_mutex;
+export module jowi.file_lock:file_mutex;
 import :sys_call;
 
-namespace moderna::file_lock {
+namespace jowi::file_lock {
 
   struct ref_counter {
     std::atomic<size_t> count;

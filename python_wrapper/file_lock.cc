@@ -1,15 +1,15 @@
 #include <pybind11/pybind11.h>
 #include <filesystem>
 #include <string>
-import moderna.file_lock;
+import jowi.file_lock;
 namespace py = pybind11;
 class PythonMutex {
-  moderna::file_lock::lf_mutex _internal_mutex;
+  jowi::file_lock::lf_mutex _internal_mutex;
   std::string _file_path;
 
 public:
   PythonMutex(const std::string &file_path) :
-    _internal_mutex{moderna::file_lock::lf_mutex::create(file_path).value()} {
+    _internal_mutex{jowi::file_lock::lf_mutex::create(file_path).value()} {
     _file_path = std::filesystem::absolute(std::filesystem::path{file_path}).string();
   }
   void lock() {
