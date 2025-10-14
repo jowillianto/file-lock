@@ -17,7 +17,7 @@ To construct a file
 #include <filesystem>
 #include <unique_lock>
 #include <shared_lock>
-import file_lock;
+import jowi.file_lock;
 
 namespace mf = jowi::file_lock;
 
